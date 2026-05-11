@@ -12,7 +12,7 @@ const ENV_FILE_NAMES = new Set([
   ".env.test"
 ]);
 
-const DEFAULT_OUTPUT = "agentic-review-loop.md";
+const DEFAULT_OUTPUT = "AGENTIC_LOOP.md";
 
 function parseArgs(argv) {
   const args = {

@@ -1,6 +1,6 @@
 # Bootstrap Guide
 
-Bootstrap creates a project-local `agentic-review-loop.md` for a target
+Bootstrap creates a project-local root `AGENTIC_LOOP.md` for a target
 repository. The generated file is a draft: Codex must refine it after reading
 the project's architecture, contributor rules, plans, CI, and test commands.
 
@@ -9,17 +9,21 @@ the project's architecture, contributor rules, plans, CI, and test commands.
 Bootstrap when:
 
 - the user asks to add agentic review loop support to a project;
-- a repository has approved specs/plans/checklists but no local loop runbook;
+- a repository has approved specs/plans/checklists but no root `AGENTIC_LOOP.md`;
 - an existing runbook is stale or too generic to guide verification.
 
 Do not overwrite an existing project runbook silently.
+
+The only canonical output path is root `AGENTIC_LOOP.md`. Do not create
+alternate runbook paths. If a legacy/noncanonical runbook already exists, treat
+it as source material to migrate into root `AGENTIC_LOOP.md`, not as the active
+canonical file.
 
 ## Command
 
 ```bash
 node "$CODEX_HOME/skills/agentic-reviewer-loop/scripts/bootstrap-project-runbook.mjs" \
-  --project /path/to/project \
-  --output /path/to/project/agentic-review-loop.md
+  --project /path/to/project
 ```
 
 Preview:
@@ -35,7 +39,7 @@ Overwrite intentionally:
 ```bash
 node "$CODEX_HOME/skills/agentic-reviewer-loop/scripts/bootstrap-project-runbook.mjs" \
   --project /path/to/project \
-  --output /path/to/project/agentic-review-loop.md \
+  --output /path/to/project/AGENTIC_LOOP.md \
   --force
 ```
 
@@ -64,14 +68,11 @@ After generation, Codex should:
 7. Add accepted-risk rules and evidence file conventions.
 8. Run a lightweight verification that the documented commands exist.
 
-## Recommended Local Files
+## Canonical Local File
 
-The final project may choose one of these names:
+The canonical project-local file is:
 
-- `agentic-review-loop.md`;
-- `docs/agentic-review-loop.md`;
-- `move-to-typescript/000-agentic-review-loop.md`;
-- another canonical path referenced from `AGENTS.md`.
+- `AGENTIC_LOOP.md`
 
-The important part is that future agents can find it from the repository's main
-instructions.
+Keep it in the repository root. Project-specific docs may link to it, but do
+not create competing runbook paths.

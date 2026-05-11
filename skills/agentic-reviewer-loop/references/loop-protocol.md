@@ -1,7 +1,7 @@
 # Agentic Review Loop Protocol
 
 This is the reusable loop. Project-specific rules belong in the target
-repository's `agentic-review-loop.md`, `AGENTS.md`, architecture docs, and
+repository's root `AGENTIC_LOOP.md`, `AGENTS.md`, architecture docs, and
 planning files.
 
 ## Required Inputs
@@ -14,6 +14,25 @@ planning files.
 - `FORBIDDEN_SCOPE`: files or behavior not to change.
 - `LIVE_GATES`: external services, credentials, manual approvals, or opt-in
   checks that cannot be silently run.
+
+## Automatic Project Runbook Preflight
+
+Before loop execution, check only for root `AGENTIC_LOOP.md`.
+
+If it is missing:
+
+1. Read `references/bootstrap-guide.md`.
+2. Run the bootstrap script with `--project <repo-root>` and no explicit
+   `--output`, so it creates `<repo-root>/AGENTIC_LOOP.md`.
+3. Read the generated draft plus the project's governing docs.
+4. Refine the draft before starting Round 0.
+5. Record in evidence that auto-bootstrap happened.
+
+Do not search for, create, or treat any project-specific alternate runbook path
+as canonical.
+
+If a noncanonical legacy runbook exists, use it only as migration input for the
+root `AGENTIC_LOOP.md`.
 
 If required planning artifacts are missing, create or update them before
 starting the loop.
@@ -67,10 +86,11 @@ perform them sequentially as self-review and label them as such.
 
 ### Round 0: Orientation
 
-1. Read spec, plan, checklist, evidence, project runbook, and governing docs.
-2. Run `git status --short`.
-3. Identify unrelated dirty worktree changes.
-4. Build a local round plan from the checklist.
+1. Ensure root `AGENTIC_LOOP.md` exists; auto-bootstrap it if missing.
+2. Read spec, plan, checklist, evidence, `AGENTIC_LOOP.md`, and governing docs.
+3. Run `git status --short`.
+4. Identify unrelated dirty worktree changes.
+5. Build a local round plan from the checklist.
 
 ### Round 1: Implementation Pass
 

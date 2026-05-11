@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate-skill.mjs",
-    "bootstrap:example": "node skills/agentic-reviewer-loop/scripts/bootstrap-project-runbook.mjs --project . --output /tmp/agentic-review-loop.example.md --force"
+    "bootstrap:example": "node skills/agentic-reviewer-loop/scripts/bootstrap-project-runbook.mjs --project . --output /tmp/AGENTIC_LOOP.example.md --force"
   },
   "engines": {
     "node": ">=20"

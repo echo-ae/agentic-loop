@@ -9,7 +9,7 @@ A portable Codex App skill for running implementation work as a bounded loop:
 5. replay the plan point by point before stopping.
 
 The reusable skill is project-agnostic. Each target repository should also keep a
-project-local `agentic-review-loop.md` runbook with its own architecture rules,
+project-local root `AGENTIC_LOOP.md` runbook with its own architecture rules,
 verification commands, live gates, and accepted-risk policy.
 
 ## Repository Layout
@@ -77,6 +77,9 @@ Replace `OWNER/REPO` with the published repository.
 
 ## Usage
 
+When loop mode starts, the skill expects a root `AGENTIC_LOOP.md`. If it is
+missing, the agent should bootstrap it automatically before running the loop.
+
 Bootstrap a project-local runbook:
 
 ```text
@@ -106,8 +109,7 @@ The skill includes a deterministic project scanner:
 
 ```bash
 node skills/agentic-reviewer-loop/scripts/bootstrap-project-runbook.mjs \
-  --project /path/to/project \
-  --output /path/to/project/agentic-review-loop.md
+  --project /path/to/project
 ```
 
 The script does not read `.env` files. It inspects project metadata, package

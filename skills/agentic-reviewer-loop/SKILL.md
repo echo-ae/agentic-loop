@@ -7,7 +7,7 @@ description: Use when an approved implementation plan needs repeated implement-r
 
 Use this skill to turn an approved no-variant spec, plan, and checklist into a
 bounded implementation loop with evidence. The global skill is project-agnostic;
-the target repository should keep its own `agentic-review-loop.md` runbook for
+the target repository should keep its own root `AGENTIC_LOOP.md` runbook for
 local architecture rules, commands, live gates, and accepted-risk policy.
 
 ## Decide The Mode
@@ -17,7 +17,9 @@ local architecture rules, commands, live gates, and accepted-risk policy.
   useful, then refine the generated runbook after inspecting the project.
 - **Loop mode**: user asks to run an agentic review loop, implement a plan with
   review rounds, or "go point by point through the plan and fix gaps". Read
-  `references/loop-protocol.md` and the project-local runbook.
+  `references/loop-protocol.md`; if root `AGENTIC_LOOP.md` is missing,
+  bootstrap it automatically before continuing. Do not search or create
+  alternate runbook paths.
 - **Reviewer mode**: user asks for an independent review role. Read
   `references/reviewer-prompts.md` and return findings only.
 
@@ -28,11 +30,14 @@ Before implementation, identify:
 - approved `SPEC_FILE`, `PLAN_FILE`, and `CHECKLIST_FILE`;
 - `EVIDENCE_FILE`, if one exists;
 - exact target scope and forbidden scope;
-- project-local `agentic-review-loop.md`, `AGENTS.md`, or equivalent rules;
+- root `AGENTIC_LOOP.md`, plus `AGENTS.md` or equivalent governing rules;
 - live gates, credentials, external services, and manual approvals.
 
-If the project-local runbook is missing, bootstrap it first. Do not run a
-multi-round loop from an informal task description alone.
+If root `AGENTIC_LOOP.md` is missing, create it automatically with the
+bootstrap script, then refine the draft after reading the project's governing
+docs. Do not overwrite an existing runbook without explicit user approval. Do
+not use alternate runbook paths as canonical files. Do not run a multi-round
+loop from an informal task description alone.
 
 ## Core Operating Rules
 
@@ -53,8 +58,7 @@ Bootstrap a local runbook:
 
 ```bash
 node "$CODEX_HOME/skills/agentic-reviewer-loop/scripts/bootstrap-project-runbook.mjs" \
-  --project . \
-  --output ./agentic-review-loop.md
+  --project .
 ```
 
 Preview without writing:
