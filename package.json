@@ -1,0 +1,15 @@
+{
+  "name": "agentic-reviewer-loop-skill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Codex App skill for bounded implement-review-repair-verify loops.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-skill.mjs",
+    "bootstrap:example": "node skills/agentic-reviewer-loop/scripts/bootstrap-project-runbook.mjs --project . --output /tmp/agentic-review-loop.example.md --force"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

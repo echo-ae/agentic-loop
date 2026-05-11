@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agentic Reviewer Loop"
+  short_description: "Repeatable implementation review loops"
+  default_prompt: "Use $agentic-reviewer-loop to run the approved plan through implement, review, repair, and verify rounds."
+policy:
+  allow_implicit_invocation: true

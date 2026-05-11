@@ -1,0 +1,243 @@
+# Agentic Review Loop Protocol
+
+This is the reusable loop. Project-specific rules belong in the target
+repository's `agentic-review-loop.md`, `AGENTS.md`, architecture docs, and
+planning files.
+
+## Required Inputs
+
+- `SPEC_FILE`: approved no-variant spec.
+- `PLAN_FILE`: approved implementation plan.
+- `CHECKLIST_FILE`: execution checklist.
+- `EVIDENCE_FILE`: evidence or audit log, if present.
+- `TARGET_SCOPE`: exact files, packages, apps, routes, workflows, or tests.
+- `FORBIDDEN_SCOPE`: files or behavior not to change.
+- `LIVE_GATES`: external services, credentials, manual approvals, or opt-in
+  checks that cannot be silently run.
+
+If required planning artifacts are missing, create or update them before
+starting the loop.
+
+## Canonical User Prompt
+
+```text
+Run the agentic review loop for:
+- SPEC_FILE:
+- PLAN_FILE:
+- CHECKLIST_FILE:
+- EVIDENCE_FILE:
+
+Implement the plan, then review and repair until the stop criteria are met.
+Use subagents for independent review roles.
+Fix all P0/P1 findings. Fix P2 findings unless they are explicitly recorded as accepted risk.
+Do not stop after the first pass.
+```
+
+## Severity Rules
+
+- `P0`: implementation is unusable, corrupts state, violates a core invariant,
+  or cannot run.
+- `P1`: required plan behavior is missing or materially wrong.
+- `P2`: correctness, maintainability, observability, or test-quality issue that
+  should be fixed before closure.
+- `P3`: polish or future improvement, not required for the current gate.
+
+P0 and P1 must be fixed. P2 must be fixed unless accepted risk is recorded with
+finding, reason, residual risk, and follow-up owner or gate.
+
+## Review Roles
+
+Run these roles with subagents when the user authorizes delegation. Otherwise,
+perform them sequentially as self-review and label them as such.
+
+- **Architecture Reviewer**: spec drift, ownership boundaries, hidden fallbacks,
+  silent degradation, duplicated architecture, missing architecture docs.
+- **Runtime Reviewer**: workflow determinism, task queues, workers, retries,
+  cancellation, idempotency, side-effect ordering, synthetic-success paths.
+- **Contract And Boundary Reviewer**: validation, unsafe casts, public contract
+  leaks, duplicated shapes, malformed external adapter responses.
+- **Test And E2E Reviewer**: mocks instead of product behavior, skipped UI
+  interactions, missing negative tests, shortcuts, flakiness.
+- **Evidence Reviewer**: checked items without proof, stale evidence, live gates
+  marked complete without opt-in runs, missing command summaries.
+- **Final Plan Replay Reviewer**: every plan step and checklist item literally
+  matches implementation, verification, blocked status, or accepted risk.
+
+## Round Algorithm
+
+### Round 0: Orientation
+
+1. Read spec, plan, checklist, evidence, project runbook, and governing docs.
+2. Run `git status --short`.
+3. Identify unrelated dirty worktree changes.
+4. Build a local round plan from the checklist.
+
+### Round 1: Implementation Pass
+
+1. Execute the next incomplete or weak checklist slice.
+2. Prefer tests before implementation for new or risky behavior.
+3. Make narrowly scoped edits.
+4. Run the smallest relevant verification command.
+5. Update checklist and evidence only after verification.
+
+### Round 2: Independent Review Pass
+
+Dispatch or perform the review roles. Findings must include:
+
+```text
+## Finding N
+Severity: P0 | P1 | P2 | P3
+Files: path:line
+Plan item: exact checklist or plan item
+Problem: concise explanation
+Required fix: concrete change
+Suggested verification: exact command or assertion
+```
+
+### Round 3: Repair Pass
+
+1. Sort by severity.
+2. Fix all P0/P1 first.
+3. Fix P2 unless accepted risk is justified.
+4. Add regression tests where practical.
+5. Update evidence with fixes and verification.
+
+### Round 4: Verification Pass
+
+Run verification from narrow to broad:
+
+1. targeted unit tests;
+2. targeted integration tests;
+3. targeted browser or E2E tests;
+4. typecheck;
+5. lint;
+6. format check;
+7. diff whitespace check;
+8. full test suite when the plan requires repo-wide proof.
+
+Live gates remain opt-in unless the user explicitly authorizes them.
+
+### Round 5: Final Adversarial Plan Replay
+
+Replay the user's manual audit prompt:
+
+```text
+Take the plan and go point by point. For each point, analyze how well it is implemented, find gaps, and fix them immediately.
+```
+
+For every plan step and checklist item, classify it as:
+
+- `implemented_and_verified`;
+- `implemented_fail_closed`;
+- `blocked_live_or_external_gate`;
+- `accepted_risk`;
+- `gap_found`.
+
+For every documented command, environment variable, URL, port, feature flag, or
+mode, verify that code implements it, tests prove it, it is blocked, or it is
+accepted as risk.
+
+Fix every `gap_found` item immediately unless it is a live/external gate that
+cannot be run silently. If replay fixes any P0/P1/P2, append evidence and run at
+least one additional review round.
+
+## Stop Criteria
+
+Stop only when all are true:
+
+- every checklist item in scope is checked, blocked, or accepted as risk;
+- no open P0/P1 findings;
+- all P2 findings fixed or recorded as accepted risk;
+- relevant tests, typecheck, lint, format, and diff checks pass or are
+  explicitly blocked;
+- evidence records verification commands and outcomes;
+- live gates are passed or explicitly left open as opt-in gates;
+- final adversarial plan replay is recorded and clean;
+- documented commands, flags, URLs, ports, and modes are implemented, verified,
+  blocked, or accepted as risk;
+- final answer reports accepted-risk P2 findings and escaped findings.
+
+Recommended stability rule: stop after a clean final plan replay plus one
+subsequent clean review round.
+
+Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
+findings remain, stop and report blockers instead of continuing blindly.
+
+## Evidence Template
+
+```markdown
+## Agentic Review Loop Round N, YYYY-MM-DD
+
+Scope:
+- SPEC_FILE:
+- PLAN_FILE:
+- CHECKLIST_FILE:
+
+Review roles run:
+- Architecture reviewer:
+- Runtime reviewer:
+- Contract and boundary reviewer:
+- Test and E2E reviewer:
+- Evidence reviewer:
+- Final plan replay reviewer:
+
+Findings:
+- P1:
+- P2:
+
+Fixes:
+- ...
+
+Verification:
+- `command`: passed
+- `command`: failed, reason, follow-up
+
+Accepted risks:
+- none
+
+Documented command and environment contract:
+- checked:
+- blocked:
+
+Final plan replay:
+- clean | gaps fixed | gaps blocked
+
+Escaped findings from prior loop:
+- none
+```
+
+## Escaped Findings
+
+An escaped finding is any P0/P1/P2 discovered after the loop recorded its stop
+criteria as satisfied.
+
+When one appears:
+
+1. Fix it using normal severity rules.
+2. Record it under `Escaped findings from prior loop`.
+3. State which stop criterion or review role missed it.
+4. Update the project runbook or narrower plan/checklist if process failed.
+5. Restart the stability requirement from the repair point.
+
+## Final Response Shape
+
+```text
+Ran the agentic review loop for <plan>.
+
+Fixed:
+- ...
+
+Verified:
+- ...
+
+Accepted P2 risks:
+- none | ...
+
+Escaped findings handled:
+- none | ...
+
+Remaining:
+- ...
+```
+
+Do not say "complete" if an acceptance gate remains open.
