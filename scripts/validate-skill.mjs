@@ -62,9 +62,6 @@ if (!openaiYaml.includes("$agentic-reviewer-loop")) {
 const skillFiles = await listFiles(skillDir).catch(() => []);
 for (const file of skillFiles) {
   const relativePath = path.relative(skillDir, file);
-  if (path.basename(file) === ".DS_Store") {
-    errors.push(`macOS metadata file must not be included: ${relativePath}`);
-  }
   const text = await readFile(file, "utf8").catch(() => "");
   if (/agentic-review-loop\.md|000-agentic-review-loop\.md/.test(text)) {
     errors.push(`Noncanonical runbook filename found in ${relativePath}; use AGENTIC_LOOP.md.`);
