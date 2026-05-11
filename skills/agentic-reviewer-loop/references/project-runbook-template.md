@@ -55,7 +55,43 @@ Use the loop only when:
 
 Do not use it for tiny fixes, quick answers, or unapproved exploratory work.
 
-## 6. Review Roles
+## 6. Impact Triage
+
+Before dispatching reviewers, classify the work and record the decision in
+evidence.
+
+Size:
+
+- `small`: one file, docs-only, localized UI polish, or a narrow test update.
+- `medium`: several files within one module or one bounded product flow.
+- `large`: cross-module work, public contracts, persistence, runtime,
+  workflows, E2E, migration docs, or external adapters.
+- `critical`: state corruption risk, external publication, live credentials,
+  billing/pricing, auth/security, orchestration, data migration, or silent
+  success risk.
+
+Risk axes:
+
+- architecture or ownership boundaries;
+- runtime/workflow/worker behavior;
+- public contracts and boundary validation;
+- persistence, migrations, or projections;
+- browser UI or E2E paths;
+- external services, live credentials, or publication;
+- observability, evidence, or quality gates.
+
+Review depth:
+
+- `small`: no subagents; owning agent performs labeled self-review.
+- `medium`: one reviewer focused on the dominant risk axis.
+- `large`: two or three reviewers with distinct roles.
+- `critical`: at least three distinct reviewers plus strict final replay; raise
+  max rounds only when the user authorizes a bounded extension.
+
+Evidence must record size, risk axes, selected reviewer roles, omitted reviewer
+roles, max rounds, and rationale.
+
+## 7. Review Roles
 
 Use the global skill roles unless this project overrides them:
 
@@ -67,7 +103,7 @@ Use the global skill roles unless this project overrides them:
 - Evidence reviewer:
 - Final plan replay reviewer:
 
-## 7. Verification Commands
+## 8. Verification Commands
 
 Default commands:
 
@@ -83,13 +119,13 @@ Targeted commands by area:
 - Persistence:
 - E2E:
 
-## 8. Live Gates
+## 9. Live Gates
 
 Live or external checks are opt-in unless the user explicitly authorizes them.
 
 - ...
 
-## 9. Evidence Rules
+## 10. Evidence Rules
 
 Evidence file format:
 
@@ -101,7 +137,15 @@ Scope:
 - PLAN_FILE:
 - CHECKLIST_FILE:
 
-Review roles run:
+Impact triage:
+- size:
+- risk axes:
+- selected reviewer roles:
+- omitted reviewer roles:
+- max rounds:
+
+Review roles run (selected roles only; omitted roles must be explained in
+Impact triage):
 - Architecture reviewer:
 - Runtime reviewer:
 - Contract and boundary reviewer:
@@ -136,7 +180,7 @@ Escaped findings from prior loop:
 Do not paste huge command logs. Summarize relevant results and keep exact
 commands.
 
-## 10. Checklist Update Rules
+## 11. Checklist Update Rules
 
 Only check an item when:
 
@@ -147,10 +191,12 @@ Only check an item when:
 Do not check items because code "looks done". Do not leave stale checked items
 after finding a gap.
 
-## 11. Subagent Dispatch Rules
+## 12. Subagent Dispatch Rules
 
 When subagents are used:
 
+- choose reviewer count and roles from Impact Triage instead of using a fixed
+  number of agents;
 - give each subagent exact files, scope, forbidden scope, and governing
   invariants;
 - prefer read-only reviewer subagents after implementation passes;
@@ -159,7 +205,7 @@ When subagents are used:
   fix it directly faster;
 - close subagents when their findings have been integrated.
 
-## 12. Failure Handling
+## 13. Failure Handling
 
 If a verification command fails:
 
@@ -175,7 +221,7 @@ Project debugging-note location:
 
 - ...
 
-## 13. Next Round Decision
+## 14. Next Round Decision
 
 Start another review round when any of these are true:
 
@@ -188,7 +234,7 @@ Start another review round when any of these are true:
 - final plan replay found a gap;
 - a documented command, environment flag, URL, port, or mode was corrected.
 
-## 14. Accepted Risk Policy
+## 15. Accepted Risk Policy
 
 P0/P1 may not be accepted as risk.
 
@@ -199,7 +245,7 @@ P2 may be accepted only when the evidence records:
 - residual risk;
 - follow-up owner or gate.
 
-## 15. Stop Criteria
+## 16. Stop Criteria
 
 The loop may stop only when:
 
@@ -208,6 +254,7 @@ The loop may stop only when:
 - all P2 findings are fixed or recorded as accepted risk;
 - verification required by this file has passed or is explicitly blocked;
 - evidence records commands and outcomes;
+- evidence records the Impact Triage decision and selected review depth;
 - live gates are passed or explicitly left open as opt-in gates;
 - final adversarial plan replay is recorded and clean;
 - documented commands, flags, URLs, ports, and modes are implemented,
@@ -221,7 +268,7 @@ Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
 findings remain, stop and report blockers instead of continuing blindly. The
 user can explicitly authorize another bounded block of rounds.
 
-## 16. Escaped Findings
+## 17. Escaped Findings
 
 If a later manual pass finds a P0/P1/P2 after the loop stopped:
 
@@ -231,7 +278,7 @@ If a later manual pass finds a P0/P1/P2 after the loop stopped:
 4. strengthen this runbook or the narrower plan/checklist when process failed;
 5. restart the stability requirement.
 
-## 17. Final Response Requirements
+## 18. Final Response Requirements
 
 The final answer must state:
 

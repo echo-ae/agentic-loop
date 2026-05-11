@@ -75,6 +75,18 @@ const bootstrapScript = await readFile(
 if (!bootstrapScript.includes('const DEFAULT_OUTPUT = "AGENTIC_LOOP.md";')) {
   errors.push("bootstrap script must default to root AGENTIC_LOOP.md.");
 }
+for (const [label, text] of [
+  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
+  [
+    "project runbook template",
+    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
+  ],
+  ["bootstrap script", bootstrapScript]
+]) {
+  if (!text.includes("Impact Triage")) {
+    errors.push(`${label} must include Impact Triage guidance.`);
+  }
+}
 
 if (errors.length > 0) {
   console.error("Skill validation failed:");

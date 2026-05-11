@@ -3,6 +3,34 @@
 Use these prompts for read-only reviewer subagents or for labeled self-review
 passes when subagents are not authorized.
 
+## Impact Triage Reviewer Prompt
+
+Use this only when scope is ambiguous or critical and the user authorized
+subagents.
+
+```text
+Review the approved plan/checklist and recommend review depth.
+
+Inputs:
+- SPEC_FILE:
+- PLAN_FILE:
+- CHECKLIST_FILE:
+- PROJECT_RUNBOOK:
+- TARGET_SCOPE:
+- FORBIDDEN_SCOPE:
+- LIVE_GATES:
+
+Return:
+- size: small | medium | large | critical
+- risk axes:
+- selected reviewer roles:
+- omitted reviewer roles:
+- max rounds:
+- rationale:
+
+Do not review implementation details yet. Do not edit files.
+```
+
 ## Shared Reviewer Prompt
 
 ```text

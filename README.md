@@ -98,6 +98,11 @@ Use subagents for independent review.
 Fix all P0/P1. Fix P2 or record accepted risk.
 ```
 
+Loop mode performs Impact Triage first, then picks review depth from risk:
+small work can use self-review, medium work usually gets one reviewer, large
+work gets two or three, and critical work gets stricter review plus bounded
+round limits.
+
 The skill intentionally separates two layers:
 
 - global method: this repository;

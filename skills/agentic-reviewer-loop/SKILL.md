@@ -46,11 +46,13 @@ loop from an informal task description alone.
   reason, residual risk, and follow-up owner or gate.
 - Treat documented commands, flags, URLs, ports, and modes as contracts that
   must be implemented, verified, blocked, or accepted as risk.
+- Run Impact Triage before reviewer dispatch; choose reviewer count and roles
+  from size/risk instead of using a fixed number of agents.
 - Run a final adversarial plan replay before stopping.
 - If a later prompt finds a P0/P1/P2 after the loop previously stopped, record
   it as an escaped finding and strengthen the runbook or plan if process failed.
 - Use subagents only when the user explicitly authorized delegation or parallel
-  agent work.
+  agent work, and only to the depth justified by Impact Triage.
 
 ## Useful Commands
 

@@ -29,6 +29,49 @@ brainstorming, or tasks where the user has not approved implementation yet.
 - `LIVE_GATES`: external services, credentials, manual approvals, or opt-in
   checks that cannot be silently run.
 
+## Impact Triage
+
+Before dispatching reviewers, the owning agent performs triage and records the
+decision in evidence. This is normally a self-triage by the owning agent, not a
+separate subagent. Use one dedicated triage reviewer only when scope is
+ambiguous or critical and the user authorized subagents.
+
+Classify change size:
+
+- `small`: one file, docs-only, localized UI polish, or a narrow test update.
+- `medium`: several files within one module or one bounded product flow.
+- `large`: cross-module work, public contracts, persistence, runtime,
+  workflows, E2E, migration docs, or external adapters.
+- `critical`: state corruption risk, publication to external systems, live
+  credentials, billing/pricing, auth/security, Temporal orchestration, data
+  migration, or any path where a failure can silently look successful.
+
+Record risk axes:
+
+- architecture or ownership boundaries;
+- runtime/workflow/worker behavior;
+- public contracts and boundary validation;
+- persistence, migrations, or projections;
+- browser UI or E2E paths;
+- external services, live credentials, or publication;
+- observability, evidence, or quality gates.
+
+Choose review depth from triage:
+
+- `small`: no subagents; owning agent performs labeled self-review.
+- `medium`: one reviewer focused on the dominant risk axis.
+- `large`: two or three reviewers with distinct roles.
+- `critical`: at least three distinct reviewers plus strict final replay; raise
+  max rounds only when the user authorizes a bounded extension.
+
+Record:
+
+- size classification;
+- risk axes;
+- selected reviewer roles and why;
+- max rounds for this loop;
+- any reviewer roles intentionally omitted and why.
+
 ## Automatic Project Runbook Preflight
 
 Before loop execution, check only for root `AGENTIC_LOOP.md`.
@@ -101,10 +144,11 @@ Responsibilities:
 - update checklist and evidence only when implementation is actually verified;
 - integrate reviewer findings.
 
-### Review Roles
+### Candidate Review Roles
 
-Run these roles with subagents when the user authorizes delegation. Otherwise,
-perform them sequentially as self-review and label them as such.
+Select from these roles according to Impact Triage. Run selected roles with
+subagents only when the user authorizes delegation. Otherwise, perform selected
+roles sequentially as self-review and label them as such.
 
 - **Architecture Reviewer**: spec drift, ownership boundaries, hidden fallbacks,
   silent degradation, legacy-direct paths, duplicated architecture, missing
@@ -131,9 +175,10 @@ perform them sequentially as self-review and label them as such.
 
 1. Ensure root `AGENTIC_LOOP.md` exists; auto-bootstrap it if missing.
 2. Read spec, plan, checklist, evidence, `AGENTIC_LOOP.md`, and governing docs.
-3. Run `git status --short`.
-4. Identify unrelated dirty worktree changes.
-5. Build a local round plan from the checklist.
+3. Run Impact Triage and choose review depth, reviewer roles, and max rounds.
+4. Run `git status --short`.
+5. Identify unrelated dirty worktree changes.
+6. Build a local round plan from the checklist.
 
 ### Round 1: Implementation Pass
 
@@ -145,7 +190,8 @@ perform them sequentially as self-review and label them as such.
 
 ### Round 2: Independent Review Pass
 
-Dispatch or perform the review roles. Findings must include:
+Dispatch or perform the reviewer roles selected by Impact Triage. Findings must
+include:
 
 ```text
 ## Finding N
@@ -230,6 +276,7 @@ Stop only when all are true:
 - relevant tests, typecheck, lint, format, and diff checks pass or are
   explicitly blocked;
 - evidence records verification commands and outcomes;
+- evidence records the Impact Triage decision and selected review depth;
 - live gates are passed or explicitly left open as opt-in gates;
 - final adversarial plan replay is recorded and clean;
 - documented commands, flags, URLs, ports, and modes are implemented, verified,
@@ -253,7 +300,15 @@ Scope:
 - PLAN_FILE:
 - CHECKLIST_FILE:
 
-Review roles run:
+Impact triage:
+- size:
+- risk axes:
+- selected reviewer roles:
+- omitted reviewer roles:
+- max rounds:
+
+Review roles run (selected roles only; omitted roles must be explained in
+Impact triage):
 - Architecture reviewer:
 - Runtime reviewer:
 - Contract and boundary reviewer:
@@ -306,6 +361,8 @@ immediately or temporarily change the checklist item to unchecked with a note.
 
 When subagents are used:
 
+- choose reviewer count and roles from Impact Triage instead of using a fixed
+  number of agents;
 - give each subagent exact files, scope, forbidden scope, and governing
   invariants;
 - do not ask two agents to edit the same files at the same time unless write
