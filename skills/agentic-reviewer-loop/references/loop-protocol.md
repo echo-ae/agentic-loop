@@ -4,6 +4,20 @@ This is the reusable loop. Project-specific rules belong in the target
 repository's root `AGENTIC_LOOP.md`, `AGENTS.md`, architecture docs, and
 planning files.
 
+## When To Use This
+
+Use this loop only when all are true:
+
+- there is an approved no-variant spec, implementation plan, and checklist;
+- the task is large enough that one implementation pass is unlikely to be
+  enough;
+- the user wants multiple review and repair passes without a new prompt after
+  each pass;
+- the work can be bounded by explicit stop criteria.
+
+Do not use this loop for tiny one-file fixes, quick answers, exploratory
+brainstorming, or tasks where the user has not approved implementation yet.
+
 ## Required Inputs
 
 - `SPEC_FILE`: approved no-variant spec.
@@ -52,6 +66,9 @@ Fix all P0/P1 findings. Fix P2 findings unless they are explicitly recorded as a
 Do not stop after the first pass.
 ```
 
+The phrase `Use subagents` is intentional. Agents may only spawn subagents when
+the user explicitly asks for delegation or parallel agent work.
+
 ## Severity Rules
 
 - `P0`: implementation is unusable, corrupts state, violates a core invariant,
@@ -64,23 +81,49 @@ Do not stop after the first pass.
 P0 and P1 must be fixed. P2 must be fixed unless accepted risk is recorded with
 finding, reason, residual risk, and follow-up owner or gate.
 
-## Review Roles
+P3 must not expand the current scope unless the user explicitly asks for polish.
+
+## Role Model
+
+The owning implementation agent remains responsible for final integration and
+verification.
+
+### Implementation Agent
+
+Responsibilities:
+
+- read the spec, plan, checklist, current evidence, `AGENTIC_LOOP.md`, and
+  governing docs;
+- inspect current code before editing;
+- implement the next checklist item or repair batch;
+- keep changes scoped;
+- run relevant tests;
+- update checklist and evidence only when implementation is actually verified;
+- integrate reviewer findings.
+
+### Review Roles
 
 Run these roles with subagents when the user authorizes delegation. Otherwise,
 perform them sequentially as self-review and label them as such.
 
 - **Architecture Reviewer**: spec drift, ownership boundaries, hidden fallbacks,
-  silent degradation, duplicated architecture, missing architecture docs.
+  silent degradation, legacy-direct paths, duplicated architecture, missing
+  architecture docs.
 - **Runtime Reviewer**: workflow determinism, task queues, workers, retries,
   cancellation, idempotency, side-effect ordering, synthetic-success paths.
 - **Contract And Boundary Reviewer**: validation, unsafe casts, public contract
   leaks, duplicated shapes, malformed external adapter responses.
 - **Test And E2E Reviewer**: mocks instead of product behavior, skipped UI
-  interactions, missing negative tests, shortcuts, flakiness.
+  interactions, missing negative tests, route or adapter shortcuts, flakiness.
 - **Evidence Reviewer**: checked items without proof, stale evidence, live gates
-  marked complete without opt-in runs, missing command summaries.
+  marked complete without opt-in runs, accepted risks without reason/residual
+  risk/follow-up, missing command summaries, documented commands or modes that
+  were never implemented or verified.
 - **Final Plan Replay Reviewer**: every plan step and checklist item literally
-  matches implementation, verification, blocked status, or accepted risk.
+  matches implementation, verification, blocked status, or accepted risk;
+  documented commands and environment contracts do not drift from runtime
+  reality; features are not merely documented; checked items use direct proof
+  when practical; blocked items should not be implementable now.
 
 ## Round Algorithm
 
@@ -161,6 +204,22 @@ Fix every `gap_found` item immediately unless it is a live/external gate that
 cannot be run silently. If replay fixes any P0/P1/P2, append evidence and run at
 least one additional review round.
 
+The loop may only stop after a clean final plan replay and one subsequent clean
+review round.
+
+## Next Round Decision
+
+Start another review round when any are true:
+
+- a P0/P1 finding was fixed in the previous round;
+- a P2 finding was fixed and the affected area has not been re-reviewed;
+- checklist items changed from unchecked to checked;
+- evidence was materially updated;
+- verification exposed a new failure;
+- implementation touched architecture, runtime, contract, or E2E boundaries;
+- final plan replay found any gap;
+- a documented command, environment flag, URL, port, or mode was corrected.
+
 ## Stop Criteria
 
 Stop only when all are true:
@@ -181,7 +240,8 @@ Recommended stability rule: stop after a clean final plan replay plus one
 subsequent clean review round.
 
 Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
-findings remain, stop and report blockers instead of continuing blindly.
+findings remain, stop and report blockers instead of continuing blindly. The
+user can explicitly authorize another bounded block of rounds.
 
 ## Evidence Template
 
@@ -226,10 +286,59 @@ Escaped findings from prior loop:
 - none
 ```
 
+Do not paste huge command logs. Summarize relevant results and keep exact
+commands.
+
+## Checklist Update Rules
+
+Only check an item when:
+
+- the implementation exists;
+- a relevant test or verification command proved it;
+- the evidence file records that proof.
+
+Do not check an item because the code "looks done".
+
+Do not leave stale checked items after finding a gap. Either fix the gap
+immediately or temporarily change the checklist item to unchecked with a note.
+
+## Subagent Dispatch Rules
+
+When subagents are used:
+
+- give each subagent exact files, scope, forbidden scope, and governing
+  invariants;
+- do not ask two agents to edit the same files at the same time unless write
+  ownership is explicitly disjoint;
+- prefer read-only reviewer subagents after each implementation pass;
+- keep architectural decisions with the owning agent;
+- do not delegate the immediate critical-path blocker if the owning agent can
+  fix it directly faster;
+- close subagents when their findings have been integrated.
+
+Use `references/reviewer-prompts.md` for reviewer and bounded repair prompt
+templates.
+
+## Failure Handling
+
+If a verification command fails:
+
+1. Reproduce or inspect the failure.
+2. Classify it as in-scope, unrelated existing failure, environment failure, or
+   live-gate failure.
+3. Fix in-scope failures immediately.
+4. Record unrelated or environment failures in evidence with exact command and
+   symptom.
+5. Do not claim the full gate passed when a required command failed.
+
+If the root cause is unclear, create or update a project debugging note and
+continue systematic debugging according to the project runbook.
+
 ## Escaped Findings
 
-An escaped finding is any P0/P1/P2 discovered after the loop recorded its stop
-criteria as satisfied.
+An escaped finding is any P0/P1/P2 issue discovered after the loop previously
+recorded its stop criteria as satisfied, especially when the user asks for a
+manual "go point by point and fix gaps" pass.
 
 When one appears:
 
@@ -238,6 +347,10 @@ When one appears:
 3. State which stop criterion or review role missed it.
 4. Update the project runbook or narrower plan/checklist if process failed.
 5. Restart the stability requirement from the repair point.
+
+The goal is not to claim that no future issue can ever be found. The goal is to
+turn every escaped issue into either a stronger process check or an explicit,
+auditable limitation.
 
 ## Final Response Shape
 
@@ -261,3 +374,19 @@ Remaining:
 ```
 
 Do not say "complete" if an acceptance gate remains open.
+
+If there are no accepted-risk P2 findings, say that explicitly. If there are
+accepted-risk P2 findings, include for each:
+
+- the finding;
+- why it was accepted instead of fixed in the current loop;
+- residual risk;
+- follow-up owner or gate.
+
+If there were no escaped findings in the current loop, say that explicitly. If
+there were escaped findings, include for each:
+
+- the finding;
+- why the previous loop missed it;
+- what process or checklist rule was strengthened;
+- how the fix was verified.

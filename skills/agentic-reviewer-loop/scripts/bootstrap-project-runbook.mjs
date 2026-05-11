@@ -411,11 +411,24 @@ Before starting a loop, identify:
 If any required planning artifact is missing, create or update it first. Do not
 start a multi-round loop from an informal task description alone.
 
-## 6. Review Roles
+## 6. When To Use The Loop
+
+Use the loop only when:
+
+- an approved no-variant spec, implementation plan, and checklist exist;
+- the task is large enough that one implementation pass is unlikely to be
+  enough;
+- the user wants multiple review and repair passes;
+- stop criteria are explicit.
+
+Do not use it for tiny fixes, quick answers, or unapproved exploratory work.
+
+## 7. Review Roles
 
 Use the global \`$agentic-reviewer-loop\` roles unless this project overrides
 them:
 
+- Implementation agent;
 - Architecture reviewer;
 - Runtime reviewer;
 - Contract and boundary reviewer;
@@ -423,13 +436,13 @@ them:
 - Evidence reviewer;
 - Final plan replay reviewer.
 
-## 7. Project Scripts
+## 8. Project Scripts
 
 Detected root package scripts:
 
 ${scriptTable(context.scripts)}
 
-## 8. Default Verification Commands
+## 9. Default Verification Commands
 
 Detected candidates:
 
@@ -447,7 +460,7 @@ npm run format:check
 git diff --check
 \`\`\`
 
-## 9. Live Gates And Environment
+## 10. Live Gates And Environment
 
 Potential environment or live-gate names found in docs/scripts:
 
@@ -459,7 +472,7 @@ Rules:
 - Live gates are opt-in unless the user explicitly authorizes them.
 - Record exact commands and outcomes for every live gate that is run.
 
-## 10. Evidence Rules
+## 11. Evidence Rules
 
 Append a dated section to the evidence file after each meaningful round:
 
@@ -507,7 +520,59 @@ Escaped findings from prior loop:
 Do not paste huge command logs. Summarize relevant results and keep exact
 commands.
 
-## 11. Accepted Risk Policy
+## 12. Checklist Update Rules
+
+Only check an item when:
+
+- implementation exists;
+- a relevant test or verification command proved it;
+- the evidence file records that proof.
+
+Do not check items because code "looks done". Do not leave stale checked items
+after finding a gap.
+
+## 13. Subagent Dispatch Rules
+
+When subagents are used:
+
+- give each subagent exact files, scope, forbidden scope, and governing
+  invariants;
+- prefer read-only reviewer subagents after implementation passes;
+- keep architectural decisions with the owning agent;
+- do not delegate the immediate critical-path blocker when the owning agent can
+  fix it directly faster;
+- close subagents when their findings have been integrated.
+
+## 14. Failure Handling
+
+If a verification command fails:
+
+1. Reproduce or inspect the failure.
+2. Classify it as in-scope, unrelated existing failure, environment failure, or
+   live-gate failure.
+3. Fix in-scope failures immediately.
+4. Record unrelated or environment failures in evidence with exact command and
+   symptom.
+5. Do not claim the full gate passed when a required command failed.
+
+Project debugging-note location:
+
+- ...
+
+## 15. Next Round Decision
+
+Start another review round when any of these are true:
+
+- a P0/P1 finding was fixed;
+- a P2 finding was fixed and the affected area has not been re-reviewed;
+- checklist items changed from unchecked to checked;
+- evidence was materially updated;
+- verification exposed a new failure;
+- architecture, runtime, contract, or E2E boundaries changed;
+- final plan replay found a gap;
+- a documented command, environment flag, URL, port, or mode was corrected.
+
+## 16. Accepted Risk Policy
 
 P0/P1 may not be accepted as risk.
 
@@ -520,7 +585,7 @@ P2 may be accepted only when the evidence records:
 
 The final answer must report every P2 accepted risk. If there are none, say so.
 
-## 12. Stop Criteria
+## 17. Stop Criteria
 
 The loop may stop only when:
 
@@ -538,7 +603,11 @@ The loop may stop only when:
 Recommended stability rule: stop after a clean final plan replay plus one
 subsequent clean review round.
 
-## 13. Escaped Findings
+Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
+findings remain, stop and report blockers instead of continuing blindly. The
+user can explicitly authorize another bounded block of rounds.
+
+## 18. Escaped Findings
 
 An escaped finding is any P0/P1/P2 discovered after the loop recorded its stop
 criteria as satisfied.
@@ -551,7 +620,19 @@ When one appears:
 4. update this runbook or narrower plan/checklist if process failed;
 5. restart the stability requirement from the repair point.
 
-## 14. Bootstrap Follow-Up Checklist
+## 19. Final Response Requirements
+
+The final answer must state:
+
+- what changed;
+- what was verified;
+- what remains;
+- every P2 accepted risk, or explicitly that there are none;
+- every escaped finding handled, or explicitly that there were none.
+
+Do not say "complete" if an acceptance gate remains open.
+
+## 20. Bootstrap Follow-Up Checklist
 
 - [ ] Project identity is manually corrected.
 - [ ] Governing docs list is complete.

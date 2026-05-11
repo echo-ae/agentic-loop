@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { access, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -17,6 +17,20 @@ const requiredFiles = [
 ];
 
 const errors = [];
+
+async function listFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await listFiles(fullPath)));
+    } else if (entry.isFile()) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
 
 for (const file of requiredFiles) {
   try {
@@ -43,6 +57,26 @@ if (!openaiYaml.includes("default_prompt:")) {
 }
 if (!openaiYaml.includes("$agentic-reviewer-loop")) {
   errors.push("agents/openai.yaml default_prompt must mention $agentic-reviewer-loop.");
+}
+
+const skillFiles = await listFiles(skillDir).catch(() => []);
+for (const file of skillFiles) {
+  const relativePath = path.relative(skillDir, file);
+  if (path.basename(file) === ".DS_Store") {
+    errors.push(`macOS metadata file must not be included: ${relativePath}`);
+  }
+  const text = await readFile(file, "utf8").catch(() => "");
+  if (/agentic-review-loop\.md|000-agentic-review-loop\.md/.test(text)) {
+    errors.push(`Noncanonical runbook filename found in ${relativePath}; use AGENTIC_LOOP.md.`);
+  }
+}
+
+const bootstrapScript = await readFile(
+  path.join(skillDir, "scripts", "bootstrap-project-runbook.mjs"),
+  "utf8"
+).catch(() => "");
+if (!bootstrapScript.includes('const DEFAULT_OUTPUT = "AGENTIC_LOOP.md";')) {
+  errors.push("bootstrap script must default to root AGENTIC_LOOP.md.");
 }
 
 if (errors.length > 0) {
