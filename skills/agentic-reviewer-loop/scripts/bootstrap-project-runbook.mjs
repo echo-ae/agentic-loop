@@ -508,6 +508,62 @@ finding ledger, changed surfaces, and relevant evidence updates. Run a full
 re-review only when repairs changed architecture, runtime, contracts,
 persistence, E2E boundaries, or final replay found a gap.
 
+### Loop State Artifacts
+
+For medium, large, and critical loops, maintain compact state artifacts in the
+evidence file or in clearly linked evidence-adjacent files.
+
+Reviewer context packet target: 80 lines or fewer unless scope is critical.
+
+\`\`\`markdown
+Reviewer context packet:
+- scope:
+- forbidden scope:
+- live gates:
+- impact triage:
+- current checklist slice:
+- changed files:
+- diffstat:
+- plan/checklist excerpts:
+- current evidence summary:
+- commands already run:
+- known failures:
+- open finding ids:
+- accepted risks:
+\`\`\`
+
+Finding ledger:
+
+\`\`\`markdown
+| id | severity | status | root cause | affected files | duplicate of | fixed by | verified by | notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+\`\`\`
+
+Verification matrix:
+
+\`\`\`markdown
+| changed surface | required command or gate | last result | required before stop | notes |
+| --- | --- | --- | --- | --- |
+\`\`\`
+
+Traceability matrix:
+
+\`\`\`markdown
+| plan/checklist item | implementation refs | verification refs | evidence refs | status |
+| --- | --- | --- | --- | --- |
+\`\`\`
+
+Delta review packet:
+
+\`\`\`markdown
+- fixed finding ids:
+- patch summary:
+- changed files since last review:
+- verification rerun:
+- remaining open findings:
+- new or changed risks:
+\`\`\`
+
 ## 10. Review Roles
 
 Use the global \`$agentic-reviewer-loop\` roles unless this project overrides
@@ -589,6 +645,13 @@ Implementation progress:
 - checklist slice executed:
 - traceability:
 - verification:
+
+Loop state artifacts:
+- reviewer context packet:
+- finding ledger:
+- verification matrix:
+- traceability matrix:
+- delta review packet:
 
 Review roles run (selected roles only; omitted roles must be explained in
 Impact triage):

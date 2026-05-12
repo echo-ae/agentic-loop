@@ -118,6 +118,11 @@ adaptive P2 caps, delta-only re-review after repairs, role fusion for medium
 scope, and a finding ledger that lets the owning agent deduplicate reviewer
 overlap without hiding independent evidence.
 
+For medium and larger work, the loop records reusable state artifacts: reviewer
+context packet, finding ledger, verification matrix, traceability matrix, and
+delta review packet. These keep later review rounds focused on changed facts
+instead of re-reading the whole plan and evidence history.
+
 The skill intentionally separates two layers:
 
 - global method: this repository;

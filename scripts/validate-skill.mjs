@@ -143,6 +143,34 @@ for (const [label, text] of [
   }
 }
 
+for (const [label, text] of [
+  ["SKILL.md", skillMd],
+  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
+  [
+    "project runbook template",
+    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
+  ],
+  ["bootstrap script", bootstrapScript]
+]) {
+  for (const phrase of [
+    "Loop State Artifacts",
+    "Reviewer context packet",
+    "finding ledger",
+    "verification matrix",
+    "traceability matrix",
+    "delta review packet"
+  ]) {
+    if (!text.includes(phrase)) {
+      errors.push(`${label} must include loop-state artifact phrase: ${phrase}.`);
+    }
+  }
+}
+
+const reviewerPrompts = await readFile(path.join(skillDir, "references", "reviewer-prompts.md"), "utf8").catch(() => "");
+if (!reviewerPrompts.includes("Extra files read")) {
+  errors.push("reviewer prompts must require reviewers to report extra files read.");
+}
+
 if (errors.length > 0) {
   console.error("Skill validation failed:");
   for (const error of errors) {

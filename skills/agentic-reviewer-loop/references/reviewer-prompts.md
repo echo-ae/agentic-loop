@@ -52,10 +52,12 @@ Use the supplied reviewer context packet first. Read additional files only when
 needed to validate a concrete finding.
 Validate completed implementation slices against the supplied plan; do not make
 yourself the driver of new implementation scope.
+Use the supplied finding ledger before reporting duplicates.
 Return all P0/P1 findings and P2 findings up to the adaptive cap in the context packet.
 Do not stop after the first finding.
 Group same-root-cause findings instead of repeating them.
 End with "No more material findings within scope" or "Stopped at finding cap".
+End with "Extra files read: none" or list every extra file read plus why it was needed.
 Do not suggest unrelated refactors.
 Do not edit files.
 
@@ -81,6 +83,7 @@ Suggested verification: exact command or assertion
   role-specific angle; the owning agent deduplicates after collection.
 - End with `No more material findings within scope` or
   `Stopped at finding cap`.
+- End with `Extra files read: none` or a file-by-file reason list.
 
 ## Architecture Reviewer Focus
 

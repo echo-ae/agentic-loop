@@ -117,6 +117,93 @@ The owning agent owns deduplication through the finding ledger. Reviewers should
 return overlapping findings when they have independent evidence; the owning
 agent marks duplicates after collection.
 
+### Loop State Artifacts
+
+For medium, large, and critical loops, maintain compact state artifacts in the
+evidence file or in clearly linked evidence-adjacent files. These artifacts are
+the shared memory of the loop; reviewers should receive these instead of the
+full conversation or full evidence history when possible.
+
+#### Reviewer Context Packet Template
+
+Keep the reviewer context packet short enough to paste into a reviewer prompt.
+Target 80 lines or fewer unless the plan scope is critical.
+
+```markdown
+Reviewer context packet:
+- scope:
+- forbidden scope:
+- live gates:
+- impact triage: size, risk axes, selected roles, omitted roles
+- current checklist slice:
+- changed files:
+- diffstat:
+- plan/checklist excerpts:
+- current evidence summary:
+- commands already run:
+- known failures:
+- open finding ids:
+- accepted risks:
+```
+
+Invalidate and rebuild the packet when target scope, selected roles, changed
+files, checklist status, open findings, accepted risks, or verification evidence
+change materially.
+
+#### Finding Ledger Schema
+
+Track every P0/P1/P2 finding in a compact ledger. Do not rely on prose history
+alone.
+
+```markdown
+| id | severity | status | root cause | affected files | duplicate of | fixed by | verified by | notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+```
+
+Allowed statuses: `open`, `fixed`, `duplicate`, `accepted_risk`, `blocked`.
+
+#### Verification Matrix
+
+Maintain a matrix that maps changed surfaces to required proof. Use it to avoid
+both over-running broad checks and under-running required checks.
+
+```markdown
+| changed surface | required command or gate | last result | required before stop | notes |
+| --- | --- | --- | --- | --- |
+```
+
+Examples: contract changes require contract tests and typecheck; workflow
+changes require worker/workflow tests and any Temporal gate required by the
+plan; browser flow changes require targeted UI or Playwright proof.
+
+#### Traceability Matrix
+
+Track plan execution explicitly so final replay can verify a compact table
+before spot-checking code and evidence.
+
+```markdown
+| plan/checklist item | implementation refs | verification refs | evidence refs | status |
+| --- | --- | --- | --- | --- |
+```
+
+Allowed statuses: `implemented_and_verified`, `implemented_fail_closed`,
+`blocked_live_or_external_gate`, `accepted_risk`, `gap_found`.
+
+#### Delta Review Packet
+
+After repairs, send reviewers a delta packet unless a full re-review trigger is
+hit.
+
+```markdown
+Delta review packet:
+- fixed finding ids:
+- patch summary:
+- changed files since last review:
+- verification rerun:
+- remaining open findings:
+- new or changed risks:
+```
+
 ## Automatic Project Runbook Preflight
 
 Before loop execution, check only for root `AGENTIC_LOOP.md`.
@@ -242,7 +329,7 @@ roles sequentially as self-review and label them as such.
 2. Read spec, plan, checklist, evidence, `AGENTIC_LOOP.md`, and governing docs.
 3. Run Impact Triage and choose review depth, reviewer roles, and max rounds.
 4. Build the reviewer context packet and initialize or update the finding
-   ledger.
+   ledger, verification matrix, and traceability matrix.
 5. Run `git status --short`.
 6. Identify unrelated dirty worktree changes.
 7. Build a local round plan from the checklist.
@@ -412,6 +499,13 @@ Implementation progress:
 - checklist slice executed:
 - traceability:
 - verification:
+
+Loop state artifacts:
+- reviewer context packet:
+- finding ledger:
+- verification matrix:
+- traceability matrix:
+- delta review packet:
 
 Review roles run (selected roles only; omitted roles must be explained in
 Impact triage):

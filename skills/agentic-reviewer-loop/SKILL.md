@@ -58,6 +58,11 @@ loop from an informal task description alone.
 - Use compact reviewer context packets, adaptive P2 caps, delta-only re-review,
   role fusion, and a finding ledger to reduce token and latency cost without
   weakening quality gates.
+- Maintain Loop State Artifacts for medium and larger work: Reviewer context
+  packet, finding ledger, verification matrix, traceability matrix, and delta
+  review packet.
+- The canonical artifacts are named exactly: Reviewer context packet, finding
+  ledger, verification matrix, traceability matrix, delta review packet.
 - Require reviewers to batch material findings: all P0/P1, P2 up to the
   adaptive cap, no P3 unless requested, and no stopping after the first issue.
 - Run a final adversarial plan replay before stopping.
