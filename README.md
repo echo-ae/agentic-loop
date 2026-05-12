@@ -1,6 +1,7 @@
 # Agentic Reviewer Loop
 
-A portable Codex App skill for running implementation work as a bounded loop:
+A portable Codex App skill for running approved plans as implementation-first
+bounded loops:
 
 1. implement from an approved spec, plan, and checklist;
 2. review with independent roles;
@@ -86,10 +87,10 @@ Bootstrap a project-local runbook:
 $agentic-reviewer-loop bootstrap this project
 ```
 
-Run a bounded agentic review loop:
+Run a bounded implementation loop with embedded review:
 
 ```text
-$agentic-reviewer-loop run the agentic review loop for:
+$agentic-reviewer-loop run the implementation loop for:
 - SPEC_FILE: docs/123-feature-no-variant-spec.md
 - PLAN_FILE: docs/124-feature-implementation-plan.md
 - CHECKLIST_FILE: docs/125-feature-checklist.md
@@ -97,6 +98,11 @@ $agentic-reviewer-loop run the agentic review loop for:
 Use subagents for independent review.
 Fix all P0/P1. Fix P2 or record accepted risk.
 ```
+
+This is implementation-first. When `SPEC_FILE`, `PLAN_FILE`, and
+`CHECKLIST_FILE` are supplied, the owning agent executes the next incomplete
+checklist slice before broad review. Reviewers validate completed slices and
+surface plan gaps; they do not become the owners of implementation scope.
 
 Loop mode performs Impact Triage first, then picks review depth from risk:
 small work can use self-review, medium work usually gets one reviewer, large

@@ -8,7 +8,7 @@ the project's architecture, contributor rules, plans, CI, and test commands.
 
 Bootstrap when:
 
-- the user asks to add agentic review loop support to a project;
+- the user asks to add implementation-loop-with-review support to a project;
 - a repository has approved specs/plans/checklists but no root `AGENTIC_LOOP.md`;
 - an existing runbook is stale or too generic to guide verification.
 

@@ -59,6 +59,9 @@ if (!openaiYaml.includes("default_prompt:")) {
 if (!openaiYaml.includes("$agentic-reviewer-loop")) {
   errors.push("agents/openai.yaml default_prompt must mention $agentic-reviewer-loop.");
 }
+if (!openaiYaml.includes("checklist-driven implement")) {
+  errors.push("agents/openai.yaml default_prompt must frame the loop as checklist-driven implementation.");
+}
 
 const skillFiles = await listFiles(skillDir).catch(() => []);
 for (const file of skillFiles) {
@@ -116,6 +119,27 @@ for (const [label, text] of [
     if (!text.includes(phrase)) {
       errors.push(`${label} must include token-efficiency phrase: ${phrase}.`);
     }
+  }
+}
+
+for (const [label, text] of [
+  ["SKILL.md", skillMd],
+  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
+  [
+    "project runbook template",
+    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
+  ],
+  ["reviewer prompts", await readFile(path.join(skillDir, "references", "reviewer-prompts.md"), "utf8").catch(() => "")],
+  ["bootstrap script", bootstrapScript]
+]) {
+  if (!text.includes("implementation-first")) {
+    errors.push(`${label} must frame the loop as implementation-first.`);
+  }
+  if (label !== "reviewer prompts" && !text.includes("Implementation-First Contract")) {
+    errors.push(`${label} must include or reference the Implementation-First Contract.`);
+  }
+  if (!text.includes("completed implementation slices") && !text.includes("completed slices")) {
+    errors.push(`${label} must state that reviewers validate completed implementation slices.`);
   }
 }
 

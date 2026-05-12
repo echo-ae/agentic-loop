@@ -6,20 +6,23 @@ description: Use when an approved implementation plan needs repeated implement-r
 # Agentic Reviewer Loop
 
 Use this skill to turn an approved no-variant spec, plan, and checklist into a
-bounded implementation loop with evidence. The global skill is project-agnostic;
-the target repository should keep its own root `AGENTIC_LOOP.md` runbook for
-local architecture rules, commands, live gates, and accepted-risk policy.
+bounded implementation loop with embedded review and evidence. This is not a
+review-only workflow: when plan artifacts are supplied, the owning agent starts
+by executing the next incomplete checklist slice, then uses reviewers to find
+gaps and repairs. The global skill is project-agnostic; the target repository
+should keep its own root `AGENTIC_LOOP.md` runbook for local architecture rules,
+commands, live gates, and accepted-risk policy.
 
 ## Decide The Mode
 
 - **Bootstrap mode**: user asks to create or initialize a project-local
   runbook. Read `references/bootstrap-guide.md`, run the bootstrap script if
   useful, then refine the generated runbook after inspecting the project.
-- **Loop mode**: user asks to run an agentic review loop, implement a plan with
-  review rounds, or "go point by point through the plan and fix gaps". Read
-  `references/loop-protocol.md`; if root `AGENTIC_LOOP.md` is missing,
-  bootstrap it automatically before continuing. Do not search or create
-  alternate runbook paths.
+- **Loop mode**: user asks to run an implementation loop with embedded review,
+  implement a plan with review rounds, or "go point by point through the plan
+  and fix gaps". Read `references/loop-protocol.md`; if root `AGENTIC_LOOP.md`
+  is missing, bootstrap it automatically before continuing. Do not search or
+  create alternate runbook paths.
 - **Reviewer mode**: user asks for an independent review role. Read
   `references/reviewer-prompts.md` and return findings only.
 
@@ -46,6 +49,10 @@ loop from an informal task description alone.
   reason, residual risk, and follow-up owner or gate.
 - Treat documented commands, flags, URLs, ports, and modes as contracts that
   must be implemented, verified, blocked, or accepted as risk.
+- Treat the loop as implementation-first: execute the next incomplete checklist
+  slice before broad review when supplied plan artifacts are not yet complete.
+- Keep reviewers out of scope ownership; they validate completed slices and
+  report plan gaps, while the owning agent drives checklist execution.
 - Run Impact Triage before reviewer dispatch; choose reviewer count and roles
   from size/risk instead of using a fixed number of agents.
 - Use compact reviewer context packets, adaptive P2 caps, delta-only re-review,
@@ -58,6 +65,9 @@ loop from an informal task description alone.
   it as an escaped finding and strengthen the runbook or plan if process failed.
 - Use subagents only when the user explicitly authorized delegation or parallel
   agent work, and only to the depth justified by Impact Triage.
+
+The detailed Implementation-First Contract lives in
+`references/loop-protocol.md` and each generated project `AGENTIC_LOOP.md`.
 
 ## Useful Commands
 

@@ -47,8 +47,11 @@ Scope:
 
 Return only findings that can change implementation, verification, checklist, or evidence quality.
 Use P0/P1/P2/P3 severity.
+This is an implementation-first loop with embedded review.
 Use the supplied reviewer context packet first. Read additional files only when
 needed to validate a concrete finding.
+Validate completed implementation slices against the supplied plan; do not make
+yourself the driver of new implementation scope.
 Return all P0/P1 findings and P2 findings up to the adaptive cap in the context packet.
 Do not stop after the first finding.
 Group same-root-cause findings instead of repeating them.

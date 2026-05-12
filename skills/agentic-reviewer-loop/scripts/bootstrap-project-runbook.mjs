@@ -353,12 +353,13 @@ function renderRunbook(context) {
     ...context.libs.map((name) => `libs/${name}`)
   ];
 
-  return `# Agentic Review Loop Runbook
+  return `# Agentic Implementation Review Loop Runbook
 
 Status: Draft generated ${today}
 
 Purpose: define the project-specific workflow for turning an approved spec,
-plan, and checklist into a self-reviewing implementation loop.
+plan, and checklist into shipped, verified work. This is an implementation-first
+loop with embedded review, not a review-only workflow.
 
 This file extends the global \`$agentic-reviewer-loop\` skill. It does not
 replace feature specs, implementation plans, checklists, evidence files,
@@ -411,7 +412,24 @@ Before starting a loop, identify:
 If any required planning artifact is missing, create or update it first. Do not
 start a multi-round loop from an informal task description alone.
 
-## 6. When To Use The Loop
+## 6. Implementation-First Contract
+
+When \`SPEC_FILE\`, \`PLAN_FILE\`, and \`CHECKLIST_FILE\` are supplied, the loop
+starts from execution, not review.
+
+Required behavior:
+
+- the owning agent executes the next incomplete or weak checklist slice before
+  asking reviewers to challenge it;
+- review rounds validate and repair completed implementation slices; they do
+  not replace checklist-driven execution;
+- reviewers must not become the primary drivers of implementation scope;
+- new work discovered by reviewers must map back to the supplied spec, plan, or
+  checklist, or be recorded as an explicit plan gap before implementation;
+- the loop cannot stop because review is clean if checklist items remain
+  unimplemented, unverified, unblocked, or unaccepted as risk.
+
+## 7. When To Use The Loop
 
 Use the loop only when:
 
@@ -423,7 +441,7 @@ Use the loop only when:
 
 Do not use it for tiny fixes, quick answers, or unapproved exploratory work.
 
-## 7. Impact Triage
+## 8. Impact Triage
 
 Before dispatching reviewers, classify the work and record the decision in
 evidence.
@@ -459,7 +477,7 @@ Review depth:
 Evidence must record size, risk axes, selected reviewer roles, omitted reviewer
 roles, max rounds, and rationale.
 
-## 8. Token And Latency Efficiency Rules
+## 9. Token And Latency Efficiency Rules
 
 Quality gates take precedence over token savings. These rules reduce repeated
 reading and reviewer overlap without weakening required review depth.
@@ -490,7 +508,7 @@ finding ledger, changed surfaces, and relevant evidence updates. Run a full
 re-review only when repairs changed architecture, runtime, contracts,
 persistence, E2E boundaries, or final replay found a gap.
 
-## 9. Review Roles
+## 10. Review Roles
 
 Use the global \`$agentic-reviewer-loop\` roles unless this project overrides
 them:
@@ -503,13 +521,16 @@ them:
 - Evidence reviewer;
 - Final plan replay reviewer.
 
-## 10. Project Scripts
+The owning agent must keep the plan moving. Reviewers validate completed slices
+and identify gaps, but they do not own the implementation roadmap.
+
+## 11. Project Scripts
 
 Detected root package scripts:
 
 ${scriptTable(context.scripts)}
 
-## 11. Default Verification Commands
+## 12. Default Verification Commands
 
 Detected candidates:
 
@@ -527,7 +548,7 @@ npm run format:check
 git diff --check
 \`\`\`
 
-## 12. Live Gates And Environment
+## 13. Live Gates And Environment
 
 Potential environment or live-gate names found in docs/scripts:
 
@@ -539,7 +560,7 @@ Rules:
 - Live gates are opt-in unless the user explicitly authorizes them.
 - Record exact commands and outcomes for every live gate that is run.
 
-## 13. Evidence Rules
+## 14. Evidence Rules
 
 Append a dated section to the evidence file after each meaningful round:
 
@@ -563,6 +584,11 @@ Token and latency controls:
 - adaptive P2 cap:
 - re-review mode: full | delta
 - finding ledger:
+
+Implementation progress:
+- checklist slice executed:
+- traceability:
+- verification:
 
 Review roles run (selected roles only; omitted roles must be explained in
 Impact triage):
@@ -605,7 +631,7 @@ Escaped findings from prior loop:
 Do not paste huge command logs. Summarize relevant results and keep exact
 commands.
 
-## 14. Checklist Update Rules
+## 15. Checklist Update Rules
 
 Only check an item when:
 
@@ -616,7 +642,7 @@ Only check an item when:
 Do not check items because code "looks done". Do not leave stale checked items
 after finding a gap.
 
-## 15. Subagent Dispatch Rules
+## 16. Subagent Dispatch Rules
 
 When subagents are used:
 
@@ -632,11 +658,12 @@ When subagents are used:
   invariants;
 - prefer read-only reviewer subagents after implementation passes;
 - keep architectural decisions with the owning agent;
+- keep implementation-scope ownership with the owning agent;
 - do not delegate the immediate critical-path blocker when the owning agent can
   fix it directly faster;
 - close subagents when their findings have been integrated.
 
-## 16. Reviewer Finding Batch Rules
+## 17. Reviewer Finding Batch Rules
 
 Reviewers must batch material findings instead of stopping after the first good
 issue.
@@ -656,7 +683,7 @@ Rules:
 - end with \`No more material findings within scope\` or
   \`Stopped at finding cap\`.
 
-## 17. Failure Handling
+## 18. Failure Handling
 
 If a verification command fails:
 
@@ -672,7 +699,7 @@ Project debugging-note location:
 
 - ...
 
-## 18. Next Round Decision
+## 19. Next Round Decision
 
 Start another review round when any of these are true:
 
@@ -686,7 +713,7 @@ Start another review round when any of these are true:
 - a documented command, environment flag, URL, port, or mode was corrected.
 - the finding ledger changed status for any P0/P1/P2 item.
 
-## 19. Accepted Risk Policy
+## 20. Accepted Risk Policy
 
 P0/P1 may not be accepted as risk.
 
@@ -699,11 +726,12 @@ P2 may be accepted only when the evidence records:
 
 The final answer must report every P2 accepted risk. If there are none, say so.
 
-## 20. Stop Criteria
+## 21. Stop Criteria
 
 The loop may stop only when:
 
 - every checklist item in scope is checked, blocked, or accepted as risk;
+- every implemented slice traces back to the supplied spec, plan, or checklist;
 - no open P0/P1 findings remain;
 - all P2 findings are fixed or recorded as accepted risk;
 - relevant verification has passed or is explicitly blocked;
@@ -724,7 +752,7 @@ Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
 findings remain, stop and report blockers instead of continuing blindly. The
 user can explicitly authorize another bounded block of rounds.
 
-## 21. Escaped Findings
+## 22. Escaped Findings
 
 An escaped finding is any P0/P1/P2 discovered after the loop recorded its stop
 criteria as satisfied.
@@ -737,7 +765,7 @@ When one appears:
 4. update this runbook or narrower plan/checklist if process failed;
 5. restart the stability requirement from the repair point.
 
-## 22. Final Response Requirements
+## 23. Final Response Requirements
 
 The final answer must state:
 
@@ -749,7 +777,7 @@ The final answer must state:
 
 Do not say "complete" if an acceptance gate remains open.
 
-## 23. Bootstrap Follow-Up Checklist
+## 24. Bootstrap Follow-Up Checklist
 
 - [ ] Project identity is manually corrected.
 - [ ] Governing docs list is complete.

@@ -1,8 +1,13 @@
-# Agentic Review Loop Protocol
+# Agentic Implementation Review Loop Protocol
 
 This is the reusable loop. Project-specific rules belong in the target
 repository's root `AGENTIC_LOOP.md`, `AGENTS.md`, architecture docs, and
 planning files.
+
+This is an implementation-first loop with embedded review, not a review-only
+workflow. When an approved spec, plan, and checklist are supplied, the owning
+agent must execute the next incomplete checklist slice before broad review,
+then use review rounds to find gaps, repair them, and verify the result.
 
 ## When To Use This
 
@@ -134,10 +139,27 @@ root `AGENTIC_LOOP.md`.
 If required planning artifacts are missing, create or update them before
 starting the loop.
 
+## Implementation-First Contract
+
+When `SPEC_FILE`, `PLAN_FILE`, and `CHECKLIST_FILE` are supplied, the loop
+starts from execution, not review.
+
+Required behavior:
+
+- the owning agent executes the next incomplete or weak checklist slice before
+  asking reviewers to challenge it;
+- review rounds validate and repair completed implementation slices; they do
+  not replace checklist-driven execution;
+- reviewers must not become the primary drivers of implementation scope;
+- new work discovered by reviewers must map back to the supplied spec, plan, or
+  checklist, or be recorded as an explicit plan gap before implementation;
+- the loop cannot stop because review is clean if checklist items remain
+  unimplemented, unverified, unblocked, or unaccepted as risk.
+
 ## Canonical User Prompt
 
 ```text
-Run the agentic review loop for:
+Run the implementation loop with embedded review for:
 - SPEC_FILE:
 - PLAN_FILE:
 - CHECKLIST_FILE:
@@ -184,6 +206,9 @@ Responsibilities:
 - update checklist and evidence only when implementation is actually verified;
 - integrate reviewer findings.
 
+The owning agent must keep the plan moving. Reviewers validate completed slices
+and identify gaps, but they do not own the implementation roadmap.
+
 ### Candidate Review Roles
 
 Select from these roles according to Impact Triage. Run selected roles with
@@ -224,7 +249,8 @@ roles sequentially as self-review and label them as such.
 
 ### Round 1: Implementation Pass
 
-1. Execute the next incomplete or weak checklist slice.
+1. Execute the next incomplete or weak checklist slice. If no slice has been
+   implemented yet, do not start with a broad review pass.
 2. Prefer tests before implementation for new or risky behavior.
 3. Make narrowly scoped edits.
 4. Run the smallest relevant verification command.
@@ -232,8 +258,11 @@ roles sequentially as self-review and label them as such.
 
 ### Round 2: Independent Review Pass
 
-Dispatch or perform the reviewer roles selected by Impact Triage. Findings must
-include:
+Dispatch or perform the reviewer roles selected by Impact Triage. Reviewers
+validate completed implementation slices against the supplied plan. They do not
+choose new product scope.
+
+Findings must include:
 
 ```text
 ## Finding N
@@ -334,6 +363,7 @@ Start another review round when any are true:
 Stop only when all are true:
 
 - every checklist item in scope is checked, blocked, or accepted as risk;
+- every implemented slice traces back to the supplied spec, plan, or checklist;
 - no open P0/P1 findings;
 - all P2 findings fixed or recorded as accepted risk;
 - relevant tests, typecheck, lint, format, and diff checks pass or are
@@ -377,6 +407,11 @@ Token and latency controls:
 - adaptive P2 cap:
 - re-review mode: full | delta
 - finding ledger:
+
+Implementation progress:
+- checklist slice executed:
+- traceability:
+- verification:
 
 Review roles run (selected roles only; omitted roles must be explained in
 Impact triage):
@@ -450,6 +485,7 @@ When subagents are used:
   ownership is explicitly disjoint;
 - prefer read-only reviewer subagents after each implementation pass;
 - keep architectural decisions with the owning agent;
+- keep implementation-scope ownership with the owning agent;
 - do not delegate the immediate critical-path blocker if the owning agent can
   fix it directly faster;
 - close subagents when their findings have been integrated.
@@ -493,7 +529,7 @@ auditable limitation.
 ## Final Response Shape
 
 ```text
-Ran the agentic review loop for <plan>.
+Ran the implementation loop with embedded review for <plan>.
 
 Fixed:
 - ...
