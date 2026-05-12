@@ -536,6 +536,10 @@ Impact triage):
 - Evidence reviewer:
 - Final plan replay reviewer:
 
+Reviewer batch status:
+- cap:
+- status: no more material findings | stopped at finding cap
+
 Findings:
 - P1:
 - P2:
@@ -589,7 +593,27 @@ When subagents are used:
   fix it directly faster;
 - close subagents when their findings have been integrated.
 
-## 15. Failure Handling
+## 15. Reviewer Finding Batch Rules
+
+Reviewers must batch material findings instead of stopping after the first good
+issue.
+
+Rules:
+
+- return every P0/P1 finding found within the assigned scope;
+- return the top 5-7 P2 findings by severity and confidence;
+- omit P3 unless the user explicitly requested polish;
+- do not stop after the first finding;
+- group same-root-cause findings into one finding with multiple affected
+  locations;
+- return overlapping findings when the reviewer has independent evidence or a
+  role-specific angle;
+- deduplication happens in the owning agent after all reviewer batches are
+  collected;
+- end with \`No more material findings within scope\` or
+  \`Stopped at finding cap\`.
+
+## 16. Failure Handling
 
 If a verification command fails:
 
@@ -605,7 +629,7 @@ Project debugging-note location:
 
 - ...
 
-## 16. Next Round Decision
+## 17. Next Round Decision
 
 Start another review round when any of these are true:
 
@@ -618,7 +642,7 @@ Start another review round when any of these are true:
 - final plan replay found a gap;
 - a documented command, environment flag, URL, port, or mode was corrected.
 
-## 17. Accepted Risk Policy
+## 18. Accepted Risk Policy
 
 P0/P1 may not be accepted as risk.
 
@@ -631,7 +655,7 @@ P2 may be accepted only when the evidence records:
 
 The final answer must report every P2 accepted risk. If there are none, say so.
 
-## 18. Stop Criteria
+## 19. Stop Criteria
 
 The loop may stop only when:
 
@@ -654,7 +678,7 @@ Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
 findings remain, stop and report blockers instead of continuing blindly. The
 user can explicitly authorize another bounded block of rounds.
 
-## 19. Escaped Findings
+## 20. Escaped Findings
 
 An escaped finding is any P0/P1/P2 discovered after the loop recorded its stop
 criteria as satisfied.
@@ -667,7 +691,7 @@ When one appears:
 4. update this runbook or narrower plan/checklist if process failed;
 5. restart the stability requirement from the repair point.
 
-## 20. Final Response Requirements
+## 21. Final Response Requirements
 
 The final answer must state:
 
@@ -679,7 +703,7 @@ The final answer must state:
 
 Do not say "complete" if an acceptance gate remains open.
 
-## 21. Bootstrap Follow-Up Checklist
+## 22. Bootstrap Follow-Up Checklist
 
 - [ ] Project identity is manually corrected.
 - [ ] Governing docs list is complete.

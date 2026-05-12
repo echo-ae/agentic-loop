@@ -103,6 +103,9 @@ small work can use self-review, medium work usually gets one reviewer, large
 work gets two or three, and critical work gets stricter review plus bounded
 round limits.
 
+Reviewers batch findings within their assigned scope: all P0/P1, the top 5-7
+P2, no P3 unless requested, and no stopping after the first issue.
+
 The skill intentionally separates two layers:
 
 - global method: this repository;

@@ -203,6 +203,26 @@ Required fix: concrete change
 Suggested verification: exact command or assertion
 ```
 
+### Reviewer Finding Batch Rules
+
+Reviewers must batch material findings instead of stopping after the first good
+issue.
+
+Rules:
+
+- return every P0/P1 finding found within the assigned scope;
+- return the top 5-7 P2 findings by severity and confidence;
+- omit P3 unless the user explicitly requested polish;
+- do not stop after the first finding;
+- if several findings have the same root cause, group them into one finding
+  with multiple affected locations;
+- if a finding overlaps another reviewer role, still return it when this
+  reviewer has independent evidence or a role-specific angle;
+- deduplication happens in the owning agent after all reviewer batches are
+  collected, not inside individual reviewers;
+- end with `No more material findings within scope` or
+  `Stopped at finding cap`.
+
 ### Round 3: Repair Pass
 
 1. Sort by severity.
@@ -315,6 +335,10 @@ Impact triage):
 - Test and E2E reviewer:
 - Evidence reviewer:
 - Final plan replay reviewer:
+
+Reviewer batch status:
+- cap:
+- status: no more material findings | stopped at finding cap
 
 Findings:
 - P1:

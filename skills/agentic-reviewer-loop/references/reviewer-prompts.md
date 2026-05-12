@@ -47,6 +47,10 @@ Scope:
 
 Return only findings that can change implementation, verification, checklist, or evidence quality.
 Use P0/P1/P2/P3 severity.
+Return all P0/P1 findings and the top 5-7 P2 findings within scope.
+Do not stop after the first finding.
+Group same-root-cause findings instead of repeating them.
+End with "No more material findings within scope" or "Stopped at finding cap".
 Do not suggest unrelated refactors.
 Do not edit files.
 
@@ -59,6 +63,19 @@ Problem: concise explanation
 Required fix: concrete change
 Suggested verification: exact command or assertion
 ```
+
+## Reviewer Finding Batch Rules
+
+- Return every P0/P1 found within assigned scope.
+- Return the top 5-7 P2 findings by severity and confidence.
+- Omit P3 unless the user explicitly requested polish.
+- Do not stop after the first finding.
+- Group same-root-cause issues into one finding with multiple affected
+  locations.
+- Return overlap with another role when you have independent evidence or a
+  role-specific angle; the owning agent deduplicates after collection.
+- End with `No more material findings within scope` or
+  `Stopped at finding cap`.
 
 ## Architecture Reviewer Focus
 

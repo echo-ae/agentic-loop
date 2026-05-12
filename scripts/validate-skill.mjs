@@ -81,10 +81,14 @@ for (const [label, text] of [
     "project runbook template",
     await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
   ],
+  ["reviewer prompts", await readFile(path.join(skillDir, "references", "reviewer-prompts.md"), "utf8").catch(() => "")],
   ["bootstrap script", bootstrapScript]
 ]) {
   if (!text.includes("Impact Triage")) {
     errors.push(`${label} must include Impact Triage guidance.`);
+  }
+  if (!text.includes("Reviewer Finding Batch Rules")) {
+    errors.push(`${label} must include Reviewer Finding Batch Rules.`);
   }
 }
 

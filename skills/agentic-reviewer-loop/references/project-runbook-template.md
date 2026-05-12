@@ -153,6 +153,10 @@ Impact triage):
 - Evidence reviewer:
 - Final plan replay reviewer:
 
+Reviewer batch status:
+- cap:
+- status: no more material findings | stopped at finding cap
+
 Findings:
 - P1:
 - P2:
@@ -205,7 +209,27 @@ When subagents are used:
   fix it directly faster;
 - close subagents when their findings have been integrated.
 
-## 13. Failure Handling
+## 13. Reviewer Finding Batch Rules
+
+Reviewers must batch material findings instead of stopping after the first good
+issue.
+
+Rules:
+
+- return every P0/P1 finding found within the assigned scope;
+- return the top 5-7 P2 findings by severity and confidence;
+- omit P3 unless the user explicitly requested polish;
+- do not stop after the first finding;
+- group same-root-cause findings into one finding with multiple affected
+  locations;
+- return overlapping findings when the reviewer has independent evidence or a
+  role-specific angle;
+- deduplication happens in the owning agent after all reviewer batches are
+  collected;
+- end with `No more material findings within scope` or
+  `Stopped at finding cap`.
+
+## 14. Failure Handling
 
 If a verification command fails:
 
@@ -221,7 +245,7 @@ Project debugging-note location:
 
 - ...
 
-## 14. Next Round Decision
+## 15. Next Round Decision
 
 Start another review round when any of these are true:
 
@@ -234,7 +258,7 @@ Start another review round when any of these are true:
 - final plan replay found a gap;
 - a documented command, environment flag, URL, port, or mode was corrected.
 
-## 15. Accepted Risk Policy
+## 16. Accepted Risk Policy
 
 P0/P1 may not be accepted as risk.
 
@@ -245,7 +269,7 @@ P2 may be accepted only when the evidence records:
 - residual risk;
 - follow-up owner or gate.
 
-## 16. Stop Criteria
+## 17. Stop Criteria
 
 The loop may stop only when:
 
@@ -268,7 +292,7 @@ Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
 findings remain, stop and report blockers instead of continuing blindly. The
 user can explicitly authorize another bounded block of rounds.
 
-## 17. Escaped Findings
+## 18. Escaped Findings
 
 If a later manual pass finds a P0/P1/P2 after the loop stopped:
 
@@ -278,7 +302,7 @@ If a later manual pass finds a P0/P1/P2 after the loop stopped:
 4. strengthen this runbook or the narrower plan/checklist when process failed;
 5. restart the stability requirement.
 
-## 18. Final Response Requirements
+## 19. Final Response Requirements
 
 The final answer must state:
 
