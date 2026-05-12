@@ -13,8 +13,10 @@ const requiredFiles = [
   "references/loop-protocol.md",
   "references/project-runbook-template.md",
   "references/reviewer-prompts.md",
+  "scripts/build-traceability-index.mjs",
   "scripts/bootstrap-project-runbook.mjs",
-  "scripts/draft-context-packet.mjs"
+  "scripts/draft-context-packet.mjs",
+  "scripts/validate-loop-state.mjs"
 ];
 
 const errors = [];
@@ -89,11 +91,28 @@ const draftContextPacketScript = await readFile(
   path.join(skillDir, "scripts", "draft-context-packet.mjs"),
   "utf8"
 ).catch(() => "");
+const buildTraceabilityIndexScript = await readFile(
+  path.join(skillDir, "scripts", "build-traceability-index.mjs"),
+  "utf8"
+).catch(() => "");
+const validateLoopStateScript = await readFile(
+  path.join(skillDir, "scripts", "validate-loop-state.mjs"),
+  "utf8"
+).catch(() => "");
 if (!bootstrapScript.includes('const DEFAULT_OUTPUT = "AGENTIC_LOOP.md";')) {
   errors.push("bootstrap script must default to root AGENTIC_LOOP.md.");
 }
 if (!draftContextPacketScript.includes("Reviewer Context Packet Draft")) {
   errors.push("draft context packet script must emit Reviewer Context Packet Draft.");
+}
+if (!draftContextPacketScript.includes("--max-lines") || !draftContextPacketScript.includes("--evidence")) {
+  errors.push("draft context packet script must support --evidence and --max-lines.");
+}
+if (!buildTraceabilityIndexScript.includes("Traceability Matrix Draft")) {
+  errors.push("build traceability index script must emit Traceability Matrix Draft.");
+}
+if (!validateLoopStateScript.includes("Loop state validation passed")) {
+  errors.push("validate loop state script must emit a success message.");
 }
 for (const [label, text] of [
   ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
@@ -170,7 +189,9 @@ for (const [label, text] of [
     "Current State",
     "runtime protocol",
     "item hash",
-    "Read and output budget"
+    "Read and output budget",
+    "build-traceability-index.mjs",
+    "validate-loop-state.mjs"
   ]) {
     if (!text.includes(phrase)) {
       errors.push(`${label} must include loop-state artifact phrase: ${phrase}.`);

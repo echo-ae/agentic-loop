@@ -94,7 +94,24 @@ Draft a reviewer context packet from repository state:
 
 ```bash
 node "$CODEX_HOME/skills/agentic-reviewer-loop/scripts/draft-context-packet.mjs" \
-  --project .
+  --project . \
+  --evidence EVIDENCE_FILE \
+  --max-lines 80
+```
+
+Build a traceability matrix draft from plan/checklist files:
+
+```bash
+node "$CODEX_HOME/skills/agentic-reviewer-loop/scripts/build-traceability-index.mjs" \
+  --plan PLAN_FILE \
+  --checklist CHECKLIST_FILE
+```
+
+Validate evidence loop state before final replay or stopping:
+
+```bash
+node "$CODEX_HOME/skills/agentic-reviewer-loop/scripts/validate-loop-state.mjs" \
+  --evidence EVIDENCE_FILE
 ```
 
 Preview without writing:

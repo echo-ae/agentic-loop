@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
 function parseArgs(argv) {
-  const args = { project: process.cwd() };
+  const args = { project: process.cwd(), maxLines: 80 };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--project") {
       args.project = argv[++index];
+    } else if (arg === "--evidence") {
+      args.evidence = argv[++index];
+    } else if (arg === "--max-lines") {
+      args.maxLines = Number.parseInt(argv[++index], 10);
     } else if (arg === "--help" || arg === "-h") {
       args.help = true;
     } else {
@@ -45,10 +50,41 @@ function uniqueLines(...texts) {
   return [...new Set(texts.join("\n").split("\n").filter(Boolean))].join("\n");
 }
 
+function extractCurrentState(evidencePath) {
+  if (!evidencePath) {
+    return "- TODO";
+  }
+  try {
+    const text = readFileSync(path.resolve(evidencePath), "utf8");
+    const match = text.match(/^## Current State\s*\n([\s\S]*?)(?=\n## |\s*$)/m);
+    if (!match) {
+      return "- Current State not found";
+    }
+    return match[1].trim() || "- Current State is empty";
+  } catch (error) {
+    return `- Could not read evidence: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+function applyMaxLines(text, maxLines) {
+  if (!Number.isFinite(maxLines) || maxLines <= 0) {
+    return text;
+  }
+  const lines = text.split("\n");
+  if (lines.length <= maxLines) {
+    return text;
+  }
+  return [
+    ...lines.slice(0, Math.max(0, maxLines - 3)),
+    "",
+    `<!-- context packet truncated to ${maxLines} lines; rebuild with a higher --max-lines only when needed -->`
+  ].join("\n");
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
-    console.log("Usage: draft-context-packet.mjs --project /path/to/project");
+    console.log("Usage: draft-context-packet.mjs --project /path/to/project [--evidence EVIDENCE.md] [--max-lines 80]");
     return;
   }
 
@@ -60,8 +96,9 @@ function main() {
   const changedFiles = runGit(projectRoot, ["diff", "--name-only"]);
   const stagedFiles = runGit(projectRoot, ["diff", "--cached", "--name-only"]);
   const untrackedFiles = runGit(projectRoot, ["ls-files", "--others", "--exclude-standard"]);
+  const currentState = extractCurrentState(args.evidence);
 
-  console.log(`# Reviewer Context Packet Draft
+  const packet = `# Reviewer Context Packet Draft
 
 - scope: TODO
 - forbidden scope: TODO
@@ -87,7 +124,7 @@ ${stagedDiffStat || "- none"}
 - TODO: include only relevant item IDs and short excerpts.
 
 ## Current Evidence Summary
-- TODO
+${currentState}
 
 ## Commands Already Run
 - TODO
@@ -100,7 +137,9 @@ ${stagedDiffStat || "- none"}
 
 ## Accepted Risks
 - TODO
-`);
+`;
+
+  console.log(applyMaxLines(packet, args.maxLines));
 }
 
 try {

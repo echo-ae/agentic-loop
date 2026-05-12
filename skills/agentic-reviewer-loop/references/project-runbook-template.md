@@ -153,6 +153,8 @@ For medium, large, and critical loops, maintain compact state artifacts in the
 evidence file or in clearly linked evidence-adjacent files.
 
 Reviewer context packet target: 80 lines or fewer unless scope is critical.
+Use `scripts/draft-context-packet.mjs --project . --evidence EVIDENCE_FILE
+--max-lines 80` when available.
 
 ```markdown
 Reviewer context packet:
@@ -180,6 +182,8 @@ Use stable IDs instead of repeating long prose:
 
 When practical, record a short content hash for every plan/checklist item in the
 traceability matrix.
+Use `scripts/build-traceability-index.mjs --plan PLAN_FILE --checklist
+CHECKLIST_FILE` when available.
 
 Finding ledger:
 
@@ -234,6 +238,9 @@ concrete finding or resolve a stated uncertainty.
 
 Evidence output budget: summarize command output in 3-8 lines, keep exact
 command and exit status, and link full logs/artifacts instead of pasting them.
+
+Use `scripts/validate-loop-state.mjs --evidence EVIDENCE_FILE` before final
+replay and before stopping when available.
 
 ## 9. Review Roles
 

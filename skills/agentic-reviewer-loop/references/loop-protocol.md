@@ -135,6 +135,8 @@ full conversation or full evidence history when possible.
 
 Keep the reviewer context packet short enough to paste into a reviewer prompt.
 Target 80 lines or fewer unless the plan scope is critical.
+Use `scripts/draft-context-packet.mjs --project . --evidence EVIDENCE_FILE
+--max-lines 80` when available.
 
 ```markdown
 Reviewer context packet:
@@ -168,6 +170,8 @@ When practical, record a short content hash for every plan/checklist item in the
 traceability matrix. If the hash and verification refs are unchanged, later
 rounds may use the matrix plus targeted spot-checks instead of rereading the
 full item text.
+Use `scripts/build-traceability-index.mjs --plan PLAN_FILE --checklist
+CHECKLIST_FILE` when creating or refreshing item IDs and hashes.
 
 #### Finding Ledger Schema
 
@@ -261,6 +265,9 @@ Evidence output budget:
 - link or name full logs/artifacts instead of pasting them;
 - do not paste long diffs, generated files, dependency logs, or full test output
   unless the exact content is the finding.
+
+Use `scripts/validate-loop-state.mjs --evidence EVIDENCE_FILE` before final
+replay and before stopping when available.
 
 ## Automatic Project Runbook Preflight
 

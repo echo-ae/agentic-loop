@@ -33,8 +33,10 @@ verification commands, live gates, and accepted-risk policy.
         │   ├── project-runbook-template.md
         │   └── reviewer-prompts.md
         └── scripts/
+            ├── build-traceability-index.mjs
             ├── bootstrap-project-runbook.mjs
-            └── draft-context-packet.mjs
+            ├── draft-context-packet.mjs
+            └── validate-loop-state.mjs
 ```
 
 ## Install In Codex App On macOS
@@ -137,7 +139,24 @@ Draft a context packet from repository state:
 
 ```bash
 node skills/agentic-reviewer-loop/scripts/draft-context-packet.mjs \
-  --project /path/to/project
+  --project /path/to/project \
+  --evidence /path/to/project/docs/evidence.md \
+  --max-lines 80
+```
+
+Build traceability IDs and hashes:
+
+```bash
+node skills/agentic-reviewer-loop/scripts/build-traceability-index.mjs \
+  --plan /path/to/plan.md \
+  --checklist /path/to/checklist.md
+```
+
+Validate evidence loop state:
+
+```bash
+node skills/agentic-reviewer-loop/scripts/validate-loop-state.mjs \
+  --evidence /path/to/evidence.md
 ```
 
 The skill intentionally separates two layers:
