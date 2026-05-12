@@ -48,8 +48,11 @@ loop from an informal task description alone.
   must be implemented, verified, blocked, or accepted as risk.
 - Run Impact Triage before reviewer dispatch; choose reviewer count and roles
   from size/risk instead of using a fixed number of agents.
-- Require reviewers to batch material findings: all P0/P1, top 5-7 P2, no P3
-  unless requested, and no stopping after the first issue.
+- Use compact reviewer context packets, adaptive P2 caps, delta-only re-review,
+  role fusion, and a finding ledger to reduce token and latency cost without
+  weakening quality gates.
+- Require reviewers to batch material findings: all P0/P1, P2 up to the
+  adaptive cap, no P3 unless requested, and no stopping after the first issue.
 - Run a final adversarial plan replay before stopping.
 - If a later prompt finds a P0/P1/P2 after the loop previously stopped, record
   it as an escaped finding and strengthen the runbook or plan if process failed.

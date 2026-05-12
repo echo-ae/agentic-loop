@@ -47,7 +47,9 @@ Scope:
 
 Return only findings that can change implementation, verification, checklist, or evidence quality.
 Use P0/P1/P2/P3 severity.
-Return all P0/P1 findings and the top 5-7 P2 findings within scope.
+Use the supplied reviewer context packet first. Read additional files only when
+needed to validate a concrete finding.
+Return all P0/P1 findings and P2 findings up to the adaptive cap in the context packet.
 Do not stop after the first finding.
 Group same-root-cause findings instead of repeating them.
 End with "No more material findings within scope" or "Stopped at finding cap".
@@ -67,7 +69,7 @@ Suggested verification: exact command or assertion
 ## Reviewer Finding Batch Rules
 
 - Return every P0/P1 found within assigned scope.
-- Return the top 5-7 P2 findings by severity and confidence.
+- Return P2 findings up to the adaptive cap set by Impact Triage.
 - Omit P3 unless the user explicitly requested polish.
 - Do not stop after the first finding.
 - Group same-root-cause issues into one finding with multiple affected

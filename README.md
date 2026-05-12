@@ -103,8 +103,14 @@ small work can use self-review, medium work usually gets one reviewer, large
 work gets two or three, and critical work gets stricter review plus bounded
 round limits.
 
-Reviewers batch findings within their assigned scope: all P0/P1, the top 5-7
-P2, no P3 unless requested, and no stopping after the first issue.
+Reviewers batch findings within their assigned scope: all P0/P1, P2 up to the
+adaptive cap from Impact Triage, no P3 unless requested, and no stopping after
+the first issue.
+
+The loop keeps review cost bounded with compact reviewer context packets,
+adaptive P2 caps, delta-only re-review after repairs, role fusion for medium
+scope, and a finding ledger that lets the owning agent deduplicate reviewer
+overlap without hiding independent evidence.
 
 The skill intentionally separates two layers:
 

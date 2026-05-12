@@ -91,7 +91,38 @@ Review depth:
 Evidence must record size, risk axes, selected reviewer roles, omitted reviewer
 roles, max rounds, and rationale.
 
-## 7. Review Roles
+## 7. Token And Latency Efficiency Rules
+
+Quality gates take precedence over token savings. These rules reduce repeated
+reading and reviewer overlap without weakening required review depth.
+
+Before dispatching reviewers, the owning agent should build a compact reviewer
+context packet:
+
+- scope, forbidden scope, and live gates;
+- Impact Triage decision and selected reviewer roles;
+- changed files, diffstat, and short change summary;
+- relevant plan/checklist excerpts, not the full plan when a narrow excerpt is
+  enough;
+- current evidence summary, commands already run, and known failures;
+- finding ledger with open, fixed, duplicate, accepted-risk, and blocked items.
+
+Adaptive P2 caps:
+
+- `small`: all P0/P1, top 0-2 P2;
+- `medium`: all P0/P1, top 3 P2;
+- `large`: all P0/P1, top 5 P2;
+- `critical`: all P0/P1, top 7 P2.
+
+For `medium` scope, prefer role fusion when it preserves coverage, such as
+`Contract+Test`, `Runtime+Evidence`, or `Architecture+Evidence`.
+
+After repairs, prefer delta-only re-review. Send reviewers the fix diff, open
+finding ledger, changed surfaces, and relevant evidence updates. Run a full
+re-review only when repairs changed architecture, runtime, contracts,
+persistence, E2E boundaries, or final replay found a gap.
+
+## 8. Review Roles
 
 Use the global skill roles unless this project overrides them:
 
@@ -103,7 +134,7 @@ Use the global skill roles unless this project overrides them:
 - Evidence reviewer:
 - Final plan replay reviewer:
 
-## 8. Verification Commands
+## 9. Verification Commands
 
 Default commands:
 
@@ -119,13 +150,13 @@ Targeted commands by area:
 - Persistence:
 - E2E:
 
-## 9. Live Gates
+## 10. Live Gates
 
 Live or external checks are opt-in unless the user explicitly authorizes them.
 
 - ...
 
-## 10. Evidence Rules
+## 11. Evidence Rules
 
 Evidence file format:
 
@@ -143,6 +174,12 @@ Impact triage:
 - selected reviewer roles:
 - omitted reviewer roles:
 - max rounds:
+
+Token and latency controls:
+- context packet:
+- adaptive P2 cap:
+- re-review mode: full | delta
+- finding ledger:
 
 Review roles run (selected roles only; omitted roles must be explained in
 Impact triage):
@@ -184,7 +221,7 @@ Escaped findings from prior loop:
 Do not paste huge command logs. Summarize relevant results and keep exact
 commands.
 
-## 11. Checklist Update Rules
+## 12. Checklist Update Rules
 
 Only check an item when:
 
@@ -195,12 +232,18 @@ Only check an item when:
 Do not check items because code "looks done". Do not leave stale checked items
 after finding a gap.
 
-## 12. Subagent Dispatch Rules
+## 13. Subagent Dispatch Rules
 
 When subagents are used:
 
 - choose reviewer count and roles from Impact Triage instead of using a fixed
   number of agents;
+- send each reviewer a compact context packet instead of the full conversation
+  or full planning corpus when a narrow packet is enough;
+- use role fusion for `medium` scope when one combined reviewer can cover the
+  selected risk axes without losing coverage;
+- use delta-only re-review after repairs unless the changed surface requires a
+  full re-review;
 - give each subagent exact files, scope, forbidden scope, and governing
   invariants;
 - prefer read-only reviewer subagents after implementation passes;
@@ -209,7 +252,7 @@ When subagents are used:
   fix it directly faster;
 - close subagents when their findings have been integrated.
 
-## 13. Reviewer Finding Batch Rules
+## 14. Reviewer Finding Batch Rules
 
 Reviewers must batch material findings instead of stopping after the first good
 issue.
@@ -217,7 +260,7 @@ issue.
 Rules:
 
 - return every P0/P1 finding found within the assigned scope;
-- return the top 5-7 P2 findings by severity and confidence;
+- return P2 findings up to the adaptive cap set by Impact Triage;
 - omit P3 unless the user explicitly requested polish;
 - do not stop after the first finding;
 - group same-root-cause findings into one finding with multiple affected
@@ -229,7 +272,7 @@ Rules:
 - end with `No more material findings within scope` or
   `Stopped at finding cap`.
 
-## 14. Failure Handling
+## 15. Failure Handling
 
 If a verification command fails:
 
@@ -245,7 +288,7 @@ Project debugging-note location:
 
 - ...
 
-## 15. Next Round Decision
+## 16. Next Round Decision
 
 Start another review round when any of these are true:
 
@@ -257,8 +300,9 @@ Start another review round when any of these are true:
 - architecture, runtime, contract, or E2E boundaries changed;
 - final plan replay found a gap;
 - a documented command, environment flag, URL, port, or mode was corrected.
+- the finding ledger changed status for any P0/P1/P2 item.
 
-## 16. Accepted Risk Policy
+## 17. Accepted Risk Policy
 
 P0/P1 may not be accepted as risk.
 
@@ -269,7 +313,7 @@ P2 may be accepted only when the evidence records:
 - residual risk;
 - follow-up owner or gate.
 
-## 17. Stop Criteria
+## 18. Stop Criteria
 
 The loop may stop only when:
 
@@ -279,6 +323,8 @@ The loop may stop only when:
 - verification required by this file has passed or is explicitly blocked;
 - evidence records commands and outcomes;
 - evidence records the Impact Triage decision and selected review depth;
+- evidence records token/latency controls: context packet, adaptive P2 cap,
+  re-review mode, and finding ledger status;
 - live gates are passed or explicitly left open as opt-in gates;
 - final adversarial plan replay is recorded and clean;
 - documented commands, flags, URLs, ports, and modes are implemented,
@@ -292,7 +338,7 @@ Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
 findings remain, stop and report blockers instead of continuing blindly. The
 user can explicitly authorize another bounded block of rounds.
 
-## 18. Escaped Findings
+## 19. Escaped Findings
 
 If a later manual pass finds a P0/P1/P2 after the loop stopped:
 
@@ -302,7 +348,7 @@ If a later manual pass finds a P0/P1/P2 after the loop stopped:
 4. strengthen this runbook or the narrower plan/checklist when process failed;
 5. restart the stability requirement.
 
-## 19. Final Response Requirements
+## 20. Final Response Requirements
 
 The final answer must state:
 

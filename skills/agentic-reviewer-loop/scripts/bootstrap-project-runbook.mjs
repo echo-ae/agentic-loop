@@ -459,7 +459,38 @@ Review depth:
 Evidence must record size, risk axes, selected reviewer roles, omitted reviewer
 roles, max rounds, and rationale.
 
-## 8. Review Roles
+## 8. Token And Latency Efficiency Rules
+
+Quality gates take precedence over token savings. These rules reduce repeated
+reading and reviewer overlap without weakening required review depth.
+
+Before dispatching reviewers, the owning agent should build a compact reviewer
+context packet:
+
+- scope, forbidden scope, and live gates;
+- Impact Triage decision and selected reviewer roles;
+- changed files, diffstat, and short change summary;
+- relevant plan/checklist excerpts, not the full plan when a narrow excerpt is
+  enough;
+- current evidence summary, commands already run, and known failures;
+- finding ledger with open, fixed, duplicate, accepted-risk, and blocked items.
+
+Adaptive P2 caps:
+
+- \`small\`: all P0/P1, top 0-2 P2;
+- \`medium\`: all P0/P1, top 3 P2;
+- \`large\`: all P0/P1, top 5 P2;
+- \`critical\`: all P0/P1, top 7 P2.
+
+For \`medium\` scope, prefer role fusion when it preserves coverage, such as
+\`Contract+Test\`, \`Runtime+Evidence\`, or \`Architecture+Evidence\`.
+
+After repairs, prefer delta-only re-review. Send reviewers the fix diff, open
+finding ledger, changed surfaces, and relevant evidence updates. Run a full
+re-review only when repairs changed architecture, runtime, contracts,
+persistence, E2E boundaries, or final replay found a gap.
+
+## 9. Review Roles
 
 Use the global \`$agentic-reviewer-loop\` roles unless this project overrides
 them:
@@ -472,13 +503,13 @@ them:
 - Evidence reviewer;
 - Final plan replay reviewer.
 
-## 9. Project Scripts
+## 10. Project Scripts
 
 Detected root package scripts:
 
 ${scriptTable(context.scripts)}
 
-## 10. Default Verification Commands
+## 11. Default Verification Commands
 
 Detected candidates:
 
@@ -496,7 +527,7 @@ npm run format:check
 git diff --check
 \`\`\`
 
-## 11. Live Gates And Environment
+## 12. Live Gates And Environment
 
 Potential environment or live-gate names found in docs/scripts:
 
@@ -508,7 +539,7 @@ Rules:
 - Live gates are opt-in unless the user explicitly authorizes them.
 - Record exact commands and outcomes for every live gate that is run.
 
-## 12. Evidence Rules
+## 13. Evidence Rules
 
 Append a dated section to the evidence file after each meaningful round:
 
@@ -526,6 +557,12 @@ Impact triage:
 - selected reviewer roles:
 - omitted reviewer roles:
 - max rounds:
+
+Token and latency controls:
+- context packet:
+- adaptive P2 cap:
+- re-review mode: full | delta
+- finding ledger:
 
 Review roles run (selected roles only; omitted roles must be explained in
 Impact triage):
@@ -568,7 +605,7 @@ Escaped findings from prior loop:
 Do not paste huge command logs. Summarize relevant results and keep exact
 commands.
 
-## 13. Checklist Update Rules
+## 14. Checklist Update Rules
 
 Only check an item when:
 
@@ -579,12 +616,18 @@ Only check an item when:
 Do not check items because code "looks done". Do not leave stale checked items
 after finding a gap.
 
-## 14. Subagent Dispatch Rules
+## 15. Subagent Dispatch Rules
 
 When subagents are used:
 
 - choose reviewer count and roles from Impact Triage instead of using a fixed
   number of agents;
+- send each reviewer a compact context packet instead of the full conversation
+  or full planning corpus when a narrow packet is enough;
+- use role fusion for \`medium\` scope when one combined reviewer can cover the
+  selected risk axes without losing coverage;
+- use delta-only re-review after repairs unless the changed surface requires a
+  full re-review;
 - give each subagent exact files, scope, forbidden scope, and governing
   invariants;
 - prefer read-only reviewer subagents after implementation passes;
@@ -593,7 +636,7 @@ When subagents are used:
   fix it directly faster;
 - close subagents when their findings have been integrated.
 
-## 15. Reviewer Finding Batch Rules
+## 16. Reviewer Finding Batch Rules
 
 Reviewers must batch material findings instead of stopping after the first good
 issue.
@@ -601,7 +644,7 @@ issue.
 Rules:
 
 - return every P0/P1 finding found within the assigned scope;
-- return the top 5-7 P2 findings by severity and confidence;
+- return P2 findings up to the adaptive cap set by Impact Triage;
 - omit P3 unless the user explicitly requested polish;
 - do not stop after the first finding;
 - group same-root-cause findings into one finding with multiple affected
@@ -613,7 +656,7 @@ Rules:
 - end with \`No more material findings within scope\` or
   \`Stopped at finding cap\`.
 
-## 16. Failure Handling
+## 17. Failure Handling
 
 If a verification command fails:
 
@@ -629,7 +672,7 @@ Project debugging-note location:
 
 - ...
 
-## 17. Next Round Decision
+## 18. Next Round Decision
 
 Start another review round when any of these are true:
 
@@ -641,8 +684,9 @@ Start another review round when any of these are true:
 - architecture, runtime, contract, or E2E boundaries changed;
 - final plan replay found a gap;
 - a documented command, environment flag, URL, port, or mode was corrected.
+- the finding ledger changed status for any P0/P1/P2 item.
 
-## 18. Accepted Risk Policy
+## 19. Accepted Risk Policy
 
 P0/P1 may not be accepted as risk.
 
@@ -655,7 +699,7 @@ P2 may be accepted only when the evidence records:
 
 The final answer must report every P2 accepted risk. If there are none, say so.
 
-## 19. Stop Criteria
+## 20. Stop Criteria
 
 The loop may stop only when:
 
@@ -665,6 +709,8 @@ The loop may stop only when:
 - relevant verification has passed or is explicitly blocked;
 - evidence records commands and outcomes;
 - evidence records the Impact Triage decision and selected review depth;
+- evidence records token/latency controls: context packet, adaptive P2 cap,
+  re-review mode, and finding ledger status;
 - live gates are passed or explicitly left open as opt-in gates;
 - final adversarial plan replay is recorded and clean;
 - documented commands, flags, URLs, ports, and modes are implemented, verified,
@@ -678,7 +724,7 @@ Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
 findings remain, stop and report blockers instead of continuing blindly. The
 user can explicitly authorize another bounded block of rounds.
 
-## 20. Escaped Findings
+## 21. Escaped Findings
 
 An escaped finding is any P0/P1/P2 discovered after the loop recorded its stop
 criteria as satisfied.
@@ -691,7 +737,7 @@ When one appears:
 4. update this runbook or narrower plan/checklist if process failed;
 5. restart the stability requirement from the repair point.
 
-## 21. Final Response Requirements
+## 22. Final Response Requirements
 
 The final answer must state:
 
@@ -703,7 +749,7 @@ The final answer must state:
 
 Do not say "complete" if an acceptance gate remains open.
 
-## 22. Bootstrap Follow-Up Checklist
+## 23. Bootstrap Follow-Up Checklist
 
 - [ ] Project identity is manually corrected.
 - [ ] Governing docs list is complete.

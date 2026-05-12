@@ -72,6 +72,46 @@ Record:
 - max rounds for this loop;
 - any reviewer roles intentionally omitted and why.
 
+## Token And Latency Efficiency Rules
+
+Quality gates take precedence over token savings. These rules reduce repeated
+reading and reviewer overlap without weakening required review depth.
+
+Before dispatching reviewers, the owning agent should build a compact reviewer
+context packet:
+
+- scope, forbidden scope, and live gates;
+- Impact Triage decision and selected reviewer roles;
+- changed files, diffstat, and short change summary;
+- relevant plan/checklist excerpts, not the full plan when a narrow excerpt is
+  enough;
+- current evidence summary, commands already run, and known failures;
+- finding ledger with open, fixed, duplicate, accepted-risk, and blocked items.
+
+Use adaptive P2 caps from Impact Triage:
+
+- `small`: all P0/P1, top 0-2 P2;
+- `medium`: all P0/P1, top 3 P2;
+- `large`: all P0/P1, top 5 P2;
+- `critical`: all P0/P1, top 7 P2.
+
+Use role fusion when it preserves coverage: for `medium` scope, prefer a single
+combined reviewer such as `Contract+Test`, `Runtime+Evidence`, or
+`Architecture+Evidence` when the risk axes are adjacent.
+
+After repair, prefer delta-only re-review:
+
+- send reviewers the fix diff, open finding ledger, changed surfaces, and
+  relevant evidence updates;
+- do not re-send unchanged plan/spec/checklist content unless the previous
+  finding touched that contract;
+- run a full re-review only when repairs changed architecture, runtime,
+  contracts, persistence, E2E boundaries, or final replay found a gap.
+
+The owning agent owns deduplication through the finding ledger. Reviewers should
+return overlapping findings when they have independent evidence; the owning
+agent marks duplicates after collection.
+
 ## Automatic Project Runbook Preflight
 
 Before loop execution, check only for root `AGENTIC_LOOP.md`.
@@ -176,9 +216,11 @@ roles sequentially as self-review and label them as such.
 1. Ensure root `AGENTIC_LOOP.md` exists; auto-bootstrap it if missing.
 2. Read spec, plan, checklist, evidence, `AGENTIC_LOOP.md`, and governing docs.
 3. Run Impact Triage and choose review depth, reviewer roles, and max rounds.
-4. Run `git status --short`.
-5. Identify unrelated dirty worktree changes.
-6. Build a local round plan from the checklist.
+4. Build the reviewer context packet and initialize or update the finding
+   ledger.
+5. Run `git status --short`.
+6. Identify unrelated dirty worktree changes.
+7. Build a local round plan from the checklist.
 
 ### Round 1: Implementation Pass
 
@@ -211,7 +253,7 @@ issue.
 Rules:
 
 - return every P0/P1 finding found within the assigned scope;
-- return the top 5-7 P2 findings by severity and confidence;
+- return P2 findings up to the adaptive cap set by Impact Triage;
 - omit P3 unless the user explicitly requested polish;
 - do not stop after the first finding;
 - if several findings have the same root cause, group them into one finding
@@ -285,6 +327,7 @@ Start another review round when any are true:
 - implementation touched architecture, runtime, contract, or E2E boundaries;
 - final plan replay found any gap;
 - a documented command, environment flag, URL, port, or mode was corrected.
+- the finding ledger changed status for any P0/P1/P2 item.
 
 ## Stop Criteria
 
@@ -297,6 +340,8 @@ Stop only when all are true:
   explicitly blocked;
 - evidence records verification commands and outcomes;
 - evidence records the Impact Triage decision and selected review depth;
+- evidence records token/latency controls: context packet, adaptive P2 cap,
+  re-review mode, and finding ledger status;
 - live gates are passed or explicitly left open as opt-in gates;
 - final adversarial plan replay is recorded and clean;
 - documented commands, flags, URLs, ports, and modes are implemented, verified,
@@ -326,6 +371,12 @@ Impact triage:
 - selected reviewer roles:
 - omitted reviewer roles:
 - max rounds:
+
+Token and latency controls:
+- context packet:
+- adaptive P2 cap:
+- re-review mode: full | delta
+- finding ledger:
 
 Review roles run (selected roles only; omitted roles must be explained in
 Impact triage):
@@ -387,6 +438,12 @@ When subagents are used:
 
 - choose reviewer count and roles from Impact Triage instead of using a fixed
   number of agents;
+- send each reviewer a compact context packet instead of the full conversation
+  or full planning corpus when a narrow packet is enough;
+- use role fusion for `medium` scope when one combined reviewer can cover the
+  selected risk axes without losing coverage;
+- use delta-only re-review after repairs unless the changed surface requires a
+  full re-review;
 - give each subagent exact files, scope, forbidden scope, and governing
   invariants;
 - do not ask two agents to edit the same files at the same time unless write

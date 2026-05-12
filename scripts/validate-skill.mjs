@@ -17,6 +17,7 @@ const requiredFiles = [
 ];
 
 const errors = [];
+const fixedP2Rule = ["top", "5-7", "P2"].join(" ");
 
 async function listFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -66,6 +67,14 @@ for (const file of skillFiles) {
   if (/agentic-review-loop\.md|000-agentic-review-loop\.md/.test(text)) {
     errors.push(`Noncanonical runbook filename found in ${relativePath}; use AGENTIC_LOOP.md.`);
   }
+  if (text.includes(fixedP2Rule)) {
+    errors.push(`${relativePath} must use the adaptive P2 cap instead of a fixed numeric P2 rule.`);
+  }
+}
+
+const readme = await readFile(path.join(root, "README.md"), "utf8").catch(() => "");
+if (readme.includes(fixedP2Rule)) {
+  errors.push("README.md must use the adaptive P2 cap instead of a fixed numeric P2 rule.");
 }
 
 const bootstrapScript = await readFile(
@@ -89,6 +98,24 @@ for (const [label, text] of [
   }
   if (!text.includes("Reviewer Finding Batch Rules")) {
     errors.push(`${label} must include Reviewer Finding Batch Rules.`);
+  }
+}
+
+for (const [label, text] of [
+  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
+  [
+    "project runbook template",
+    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
+  ],
+  ["bootstrap script", bootstrapScript]
+]) {
+  if (!text.includes("Token And Latency Efficiency Rules")) {
+    errors.push(`${label} must include Token And Latency Efficiency Rules.`);
+  }
+  for (const phrase of ["context packet", "adaptive P2 cap", "finding ledger", "delta-only re-review", "role fusion"]) {
+    if (!text.includes(phrase)) {
+      errors.push(`${label} must include token-efficiency phrase: ${phrase}.`);
+    }
   }
 }
 
