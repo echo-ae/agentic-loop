@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Install the agentic-reviewer-loop Codex skill on macOS.
+Install the agentic-loop Codex skill on macOS.
 
 Usage:
   ./scripts/install-macos.sh [--copy|--symlink] [--force] [--codex-home PATH]
@@ -11,7 +11,8 @@ Usage:
 Options:
   --copy             Copy the skill directory. Default.
   --symlink          Symlink the skill directory for local development.
-  --force            Replace an existing installed skill.
+  --force            Replace an existing installed skill and remove the legacy
+                    agentic-reviewer-loop install if present.
   --codex-home PATH  Override CODEX_HOME. Defaults to $CODEX_HOME or ~/.codex.
   -h, --help         Show this help.
 
@@ -59,9 +60,10 @@ fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
-SOURCE_DIR="$REPO_ROOT/skills/agentic-reviewer-loop"
+SOURCE_DIR="$REPO_ROOT/skills/agentic-loop"
 DEST_PARENT="$CODEX_HOME_DIR/skills"
-DEST_DIR="$DEST_PARENT/agentic-reviewer-loop"
+DEST_DIR="$DEST_PARENT/agentic-loop"
+LEGACY_DEST_DIR="$DEST_PARENT/agentic-reviewer-loop"
 
 if [[ ! -f "$SOURCE_DIR/SKILL.md" ]]; then
   echo "Skill source not found at $SOURCE_DIR" >&2
@@ -79,6 +81,15 @@ if [[ -e "$DEST_DIR" || -L "$DEST_DIR" ]]; then
   rm -rf "$DEST_DIR"
 fi
 
+if [[ "$LEGACY_DEST_DIR" != "$DEST_DIR" && ( -e "$LEGACY_DEST_DIR" || -L "$LEGACY_DEST_DIR" ) ]]; then
+  if [[ "$FORCE" != "1" ]]; then
+    echo "Legacy destination already exists: $LEGACY_DEST_DIR" >&2
+    echo "Re-run with --force to remove the legacy install while installing agentic-loop." >&2
+    exit 1
+  fi
+  rm -rf "$LEGACY_DEST_DIR"
+fi
+
 if [[ "$MODE" == "symlink" ]]; then
   ln -s "$SOURCE_DIR" "$DEST_DIR"
 else
@@ -86,7 +97,7 @@ else
   (cd "$SOURCE_DIR" && tar -cf - .) | (cd "$DEST_DIR" && tar -xf -)
 fi
 
-echo "Installed agentic-reviewer-loop skill:"
+echo "Installed agentic-loop skill:"
 echo "  $DEST_DIR"
 echo
 echo "Restart Codex App to pick up the skill."

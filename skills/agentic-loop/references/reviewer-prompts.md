@@ -3,6 +3,11 @@
 Use these prompts for read-only reviewer subagents or for labeled self-review
 passes when subagents are not authorized.
 
+When these prompts are sent to subagents, treat them as visible ephemeral workers:
+use compact packet context, avoid full-thread forks unless required, keep active
+children open while they are running so Codex App can show their status panel
+state, and close each child agent after the owning agent integrates its findings.
+
 ## Impact Triage Reviewer Prompt
 
 Use this only when scope is ambiguous or critical and the user authorized
@@ -34,7 +39,11 @@ Do not review implementation details yet. Do not edit files.
 ## Shared Reviewer Prompt
 
 ```text
-Review the current implementation against:
+Review the current implementation using the supplied reviewer context packet,
+finding ledger, verification matrix, and traceability rows first.
+
+Reference files, open only if the packet or matrix row is insufficient for a
+concrete finding:
 - SPEC_FILE:
 - PLAN_FILE:
 - CHECKLIST_FILE:
@@ -49,7 +58,7 @@ Return only findings that can change implementation, verification, checklist, or
 Use P0/P1/P2/P3 severity.
 This is an implementation-first loop with embedded review.
 Use the supplied reviewer context packet first. Read additional files only when
-needed to validate a concrete finding.
+needed to validate a concrete finding or resolve a stated uncertainty.
 Validate completed implementation slices against the supplied plan; do not make
 yourself the driver of new implementation scope.
 Use the supplied finding ledger before reporting duplicates.
@@ -129,7 +138,12 @@ Suggested verification: exact command or assertion
 
 ## Final Plan Replay Reviewer Focus
 
-Read every plan step and checklist item literally. For each one, classify:
+Use the traceability matrix first. Read full plan/checklist text only for rows
+that are changed, new, missing implementation refs, missing verification refs,
+gap-found, blocked, accepted-risk, linked to open findings, or selected by the
+deterministic hash spot-check.
+
+For each replayed row, classify:
 
 - `implemented_and_verified`;
 - `implemented_fail_closed`;

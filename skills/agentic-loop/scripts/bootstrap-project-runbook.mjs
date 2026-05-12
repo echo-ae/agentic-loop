@@ -13,13 +13,18 @@ const ENV_FILE_NAMES = new Set([
 ]);
 
 const DEFAULT_OUTPUT = "AGENTIC_LOOP.md";
+const ARCHITECTURE_DOC_CANDIDATES = ["ARCHITECTURE.md", "docs/ARCHITECTURE.md", "docs/architecture.md"];
+const ARCHITECTURE_SIGNAL_PATTERN =
+  /\b(architecture|stack|boundary|owner|ownership|runtime|workflow|temporal|database|postgres|projection|contract|package|app|service|adapter|integration|source of truth|forbidden|must|must not|do not|invariant|queue|worker|api|route|data flow|publication|tracker)\b/i;
 
 function parseArgs(argv) {
   const args = {
     project: process.cwd(),
     output: undefined,
     dryRun: false,
-    force: false
+    force: false,
+    selfContained: false,
+    includeAllScripts: false
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -32,6 +37,10 @@ function parseArgs(argv) {
       args.dryRun = true;
     } else if (arg === "--force") {
       args.force = true;
+    } else if (arg === "--self-contained") {
+      args.selfContained = true;
+    } else if (arg === "--include-all-scripts") {
+      args.includeAllScripts = true;
     } else if (arg === "-h" || arg === "--help") {
       printHelp();
       process.exit(0);
@@ -52,6 +61,12 @@ Options:
   --output PATH   Output file. Defaults to PROJECT/${DEFAULT_OUTPUT}.
   --dry-run       Print generated runbook instead of writing it.
   --force         Overwrite output when it exists.
+  --self-contained
+                  Generate the full standalone protocol. Default output is compact
+                  and project-specific, assuming the global skill is available.
+  --include-all-scripts
+                  Include every root package.json script in compact output.
+                  Default compact output lists only preferred verification scripts.
 
 The scanner never reads .env files.`);
 }
@@ -164,6 +179,68 @@ function collectEnvNames(texts) {
   return [...envNames].sort();
 }
 
+function compactArchitectureLine(line) {
+  return line
+    .replace(/\s+/g, " ")
+    .replace(/^\s*[-*]\s+/, "")
+    .replace(/^#+\s+/, "")
+    .trim()
+    .slice(0, 220);
+}
+
+async function collectArchitectureOrientation(projectRoot, architectureDocs) {
+  const docs = architectureDocs.length > 0 ? architectureDocs : ARCHITECTURE_DOC_CANDIDATES;
+  const sourceDocs = [];
+  const headings = [];
+  const signals = [];
+
+  for (const relativePath of docs) {
+    const text = await readTextIfExists(projectRoot, relativePath, 90_000);
+    if (!text) {
+      continue;
+    }
+    sourceDocs.push(relativePath);
+    const lines = text.split("\n");
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      const lineNumber = index + 1;
+      const heading = /^(#{1,4})\s+(.+?)\s*$/.exec(line);
+      if (heading && headings.length < 16) {
+        const level = heading[1].length;
+        const title = compactArchitectureLine(heading[2]);
+        headings.push(`${relativePath}:${lineNumber} ${"  ".repeat(Math.max(0, level - 1))}${title}`);
+        continue;
+      }
+      const normalized = compactArchitectureLine(line);
+      if (
+        normalized &&
+        normalized.length >= 24 &&
+        ARCHITECTURE_SIGNAL_PATTERN.test(normalized) &&
+        signals.length < 24
+      ) {
+        signals.push(`${relativePath}:${lineNumber} ${normalized}`);
+      }
+    }
+  }
+
+  if (sourceDocs.length === 0) {
+    return "";
+  }
+
+  return `Source docs:
+${listOrNone(unique(sourceDocs))}
+
+Key headings:
+${listOrNone(headings)}
+
+High-signal architecture notes:
+${listOrNone(signals)}
+
+Agent use:
+- Use this map to pick target-scope governing sections before Impact Triage.
+- Expand the original architecture doc only when active scope, ownership, data flow, or forbidden shortcuts are unclear.`;
+}
+
 function collectVerificationCommands(scripts) {
   const preferredNames = [
     "typecheck",
@@ -267,6 +344,8 @@ async function inspectProject(projectRoot) {
     "docs/architecture.md",
     "docs/ARCHITECTURE.md"
   ]);
+  const architectureDocs = governingDocs.filter((docPath) => /(^|\/)architecture\.md$/i.test(docPath));
+  const architectureOrientation = await collectArchitectureOrientation(projectRoot, architectureDocs);
 
   const configs = await detectFiles(projectRoot, [
     "package.json",
@@ -319,6 +398,7 @@ async function inspectProject(projectRoot) {
     services,
     libs,
     stack,
+    architectureOrientation,
     scripts,
     workspaceVerificationCommands: collectWorkspaceVerificationCommands(workspacePackages),
     verificationCommands: collectVerificationCommands(scripts),
@@ -335,6 +415,22 @@ function listOrNone(values) {
 
 function scriptTable(scripts) {
   const entries = Object.entries(scripts);
+  if (entries.length === 0) {
+    return "- none detected";
+  }
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, command]) => `- \`${name}\`: \`${command}\``)
+    .join("\n");
+}
+
+function scriptTableForCommands(scripts, commands) {
+  const scriptNames = new Set(
+    commands
+      .map((command) => command.match(/^npm run ([^\s]+)/)?.[1])
+      .filter(Boolean)
+  );
+  const entries = Object.entries(scripts).filter(([name]) => scriptNames.has(name));
   if (entries.length === 0) {
     return "- none detected";
   }
@@ -361,7 +457,7 @@ Purpose: define the project-specific workflow for turning an approved spec,
 plan, and checklist into shipped, verified work. This is an implementation-first
 loop with embedded review, not a review-only workflow.
 
-This file extends the global \`$agentic-reviewer-loop\` skill. It does not
+This file extends the global \`$agentic-loop\` skill. It does not
 replace feature specs, implementation plans, checklists, evidence files,
 architecture docs, or repository instructions.
 
@@ -383,6 +479,14 @@ ${listOrNone(context.governingDocs)}
 
 Agents must read the governing docs that apply to the target scope before
 starting a loop.
+
+## Architecture Orientation
+
+${context.architectureOrientation || "- none detected"}
+
+Treat this as a compact navigation map, not as a replacement for the source
+architecture documents. Expand the original architecture docs when ownership,
+data flow, runtime boundaries, or forbidden shortcuts are unclear.
 
 ## 3. Detected Config Files
 
@@ -493,6 +597,7 @@ Before dispatching reviewers, the owning agent should build a compact reviewer
 context packet:
 
 - scope, forbidden scope, and live gates;
+- Architecture Orientation from this runbook unless explicitly irrelevant;
 - Impact Triage decision and selected reviewer roles;
 - changed files, diffstat, and short change summary;
 - relevant plan/checklist excerpts, not the full plan when a narrow excerpt is
@@ -520,9 +625,29 @@ persistence, E2E boundaries, or final replay found a gap.
 For medium, large, and critical loops, maintain compact state artifacts in the
 evidence file or in clearly linked evidence-adjacent files.
 
+Prefer canonical sidecar files under \`.agentic-loop/\` when inline evidence
+would become noisy:
+
+- \`.agentic-loop/context.md\`
+- \`.agentic-loop/findings.md\`
+- \`.agentic-loop/verification.md\`
+- \`.agentic-loop/traceability.md\`
+- \`.agentic-loop/delta.md\`
+
+Keep the evidence file as the index by linking these files from \`Loop state
+artifacts:\` and keeping only rolling state plus command summaries inline.
+
 Reviewer context packet target: 80 lines or fewer unless scope is critical.
 Use \`scripts/draft-context-packet.mjs --project . --evidence EVIDENCE_FILE
---max-lines 80\` when available.
+--max-lines 80 --max-files 40 --include TARGET_SCOPE --scope "current slice"\`
+when available. Use repeated \`--include\` and \`--exclude\` flags to keep
+packets scoped to the current work. Add \`--forbidden-scope\`, \`--live-gates\`,
+\`--command\`, and \`--known-failure\` when those values are known; empty
+sections are omitted instead of filled with placeholders. The script also reads
+\`.agentic-loop/findings.md\`, \`.agentic-loop/verification.md\`,
+\`.agentic-loop/traceability.md\`, and \`.agentic-loop/delta.md\` when present,
+prioritizing P0/P1 open findings, \`gap_found\`, blocked/accepted-risk rows,
+failed gates, then TODO rows.
 
 \`\`\`markdown
 Reviewer context packet:
@@ -551,7 +676,13 @@ Use stable IDs instead of repeating long prose:
 When practical, record a short content hash for every plan/checklist item in the
 traceability matrix.
 Use \`scripts/build-traceability-index.mjs --plan PLAN_FILE --checklist
-CHECKLIST_FILE\` when available.
+CHECKLIST_FILE --existing .agentic-loop/traceability.md\` when available, so
+stable IDs survive plan insertions and later rounds can review only changed
+rows.
+Headings are not indexed by default; pass \`--include-headings\` only when
+headings are actionable plan/checklist items.
+For large plans, use \`--section\`, \`--ids\`, and \`--status\` to emit only
+the active slice or replay target.
 
 Finding ledger:
 
@@ -573,6 +704,10 @@ Traceability matrix:
 | id | item hash | implementation refs | verification refs | evidence refs | status |
 | --- | --- | --- | --- | --- | --- |
 \`\`\`
+
+Final replay reads all changed, new, gap, blocked, accepted-risk, and
+open-finding rows. For unchanged verified rows, use deterministic hash-based
+spot checks instead of rereading the full plan every round.
 
 Delta review packet:
 
@@ -610,9 +745,44 @@ command and exit status, and link full logs/artifacts instead of pasting them.
 Use \`scripts/validate-loop-state.mjs --evidence EVIDENCE_FILE\` before final
 replay and before stopping when available.
 
-## 10. Review Roles
+## 10. Progress Beacons
 
-Use the global \`$agentic-reviewer-loop\` roles unless this project overrides
+Progress Beacons are mandatory user-visible chat/commentary updates during the
+loop. They are not approval gates, and they do not stop the work. Writing the
+same information only into the evidence file or \`.agentic-loop\` sidecars does
+not satisfy this requirement.
+
+Emit a Progress Beacon:
+
+- after orientation and Impact Triage;
+- after an implementation slice is patched;
+- when reviewer batches finish, before repair starts;
+- after P0/P1 repair decisions are made;
+- after meaningful verification passes or failures;
+- before final adversarial plan replay;
+- when a live gate, credentialed check, or external service blocks progress.
+
+This applies even in short loops when any reviewer finding, repair decision,
+patch, verification result, or blocked gate occurs.
+
+Each beacon should briefly say what was found, what was fixed, what remains
+open or risky, and what will be repaired or verified next. Do not paste long
+logs, diffs, secrets, or raw credential values. Continue working unless the
+user explicitly asks to pause or redirect.
+
+Default format:
+
+\`\`\`text
+Progress Beacon:
+- found:
+- fixed:
+- still open:
+- next:
+\`\`\`
+
+## 11. Review Roles
+
+Use the global \`$agentic-loop\` roles unless this project overrides
 them:
 
 - Implementation agent;
@@ -626,13 +796,13 @@ them:
 The owning agent must keep the plan moving. Reviewers validate completed slices
 and identify gaps, but they do not own the implementation roadmap.
 
-## 11. Project Scripts
+## 12. Project Scripts
 
 Detected root package scripts:
 
 ${scriptTable(context.scripts)}
 
-## 12. Default Verification Commands
+## 13. Default Verification Commands
 
 Detected candidates:
 
@@ -650,7 +820,7 @@ npm run format:check
 git diff --check
 \`\`\`
 
-## 13. Live Gates And Environment
+## 14. Live Gates And Environment
 
 Potential environment or live-gate names found in docs/scripts:
 
@@ -662,7 +832,7 @@ Rules:
 - Live gates are opt-in unless the user explicitly authorizes them.
 - Record exact commands and outcomes for every live gate that is run.
 
-## 14. Evidence Rules
+## 15. Evidence Rules
 
 Append a dated section to the evidence file after each meaningful round:
 
@@ -757,7 +927,7 @@ Escaped findings from prior loop:
 Do not paste huge command logs. Summarize relevant results and keep exact
 commands.
 
-## 15. Checklist Update Rules
+## 16. Checklist Update Rules
 
 Only check an item when:
 
@@ -768,7 +938,7 @@ Only check an item when:
 Do not check items because code "looks done". Do not leave stale checked items
 after finding a gap.
 
-## 16. Subagent Dispatch Rules
+## 17. Subagent Dispatch Rules
 
 When subagents are used:
 
@@ -787,9 +957,18 @@ When subagents are used:
 - keep implementation-scope ownership with the owning agent;
 - do not delegate the immediate critical-path blocker when the owning agent can
   fix it directly faster;
-- close subagents when their findings have been integrated.
+- treat subagents as visible ephemeral workers, not durable project chats;
+- call \`spawn_agent\` with \`fork_context: false\` by default and pass only the
+  compact context packet; use \`fork_context: true\` only when the full current
+  thread is explicitly required and record that reason in evidence;
+- keep each spawned child open while it is actively running so Codex App can
+  show active subagent status in the status panel;
+- after \`wait_agent\` returns a result, call \`close_agent\` for that child
+  once findings or patches are integrated;
+- do not leave idle, completed, failed, or superseded subagents open across a
+  repair round, batch boundary, commit, or final response.
 
-## 17. Reviewer Finding Batch Rules
+## 18. Reviewer Finding Batch Rules
 
 Reviewers must batch material findings instead of stopping after the first good
 issue.
@@ -809,7 +988,7 @@ Rules:
 - end with \`No more material findings within scope\` or
   \`Stopped at finding cap\`.
 
-## 18. Failure Handling
+## 19. Failure Handling
 
 If a verification command fails:
 
@@ -825,7 +1004,7 @@ Project debugging-note location:
 
 - ...
 
-## 19. Next Round Decision
+## 20. Next Round Decision
 
 Start another review round when any of these are true:
 
@@ -839,7 +1018,7 @@ Start another review round when any of these are true:
 - a documented command, environment flag, URL, port, or mode was corrected.
 - the finding ledger changed status for any P0/P1/P2 item.
 
-## 20. Accepted Risk Policy
+## 21. Accepted Risk Policy
 
 P0/P1 may not be accepted as risk.
 
@@ -852,7 +1031,7 @@ P2 may be accepted only when the evidence records:
 
 The final answer must report every P2 accepted risk. If there are none, say so.
 
-## 21. Stop Criteria
+## 22. Stop Criteria
 
 The loop may stop only when:
 
@@ -865,6 +1044,7 @@ The loop may stop only when:
 - evidence records the Impact Triage decision and selected review depth;
 - evidence records token/latency controls: context packet, adaptive P2 cap,
   re-review mode, and finding ledger status;
+- no child agent remains open;
 - live gates are passed or explicitly left open as opt-in gates;
 - final adversarial plan replay is recorded and clean;
 - documented commands, flags, URLs, ports, and modes are implemented, verified,
@@ -878,7 +1058,7 @@ Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
 findings remain, stop and report blockers instead of continuing blindly. The
 user can explicitly authorize another bounded block of rounds.
 
-## 22. Escaped Findings
+## 23. Escaped Findings
 
 An escaped finding is any P0/P1/P2 discovered after the loop recorded its stop
 criteria as satisfied.
@@ -891,7 +1071,7 @@ When one appears:
 4. update this runbook or narrower plan/checklist if process failed;
 5. restart the stability requirement from the repair point.
 
-## 23. Final Response Requirements
+## 24. Final Response Requirements
 
 The final answer must state:
 
@@ -903,7 +1083,7 @@ The final answer must state:
 
 Do not say "complete" if an acceptance gate remains open.
 
-## 24. Bootstrap Follow-Up Checklist
+## 25. Bootstrap Follow-Up Checklist
 
 - [ ] Project identity is manually corrected.
 - [ ] Governing docs list is complete.
@@ -911,6 +1091,220 @@ Do not say "complete" if an acceptance gate remains open.
 - [ ] Default verification commands are exact and tested.
 - [ ] Live gates are explicit and do not expose secrets.
 - [ ] Evidence file location and format are agreed.
+- [ ] This runbook is linked from the main agent instructions.
+`;
+}
+
+function renderCompactRunbook(context, options) {
+  const today = new Date().toISOString().slice(0, 10);
+  const layout = [
+    ...context.apps.map((name) => `apps/${name}`),
+    ...context.packages.map((name) => `packages/${name}`),
+    ...context.services.map((name) => `services/${name}`),
+    ...context.libs.map((name) => `libs/${name}`)
+  ];
+
+  return `# Agentic Implementation Review Loop Runbook
+
+Status: Draft generated ${today}
+
+Purpose: project-specific runtime protocol for using the global
+\`$agentic-loop\` skill in this repository. Keep this file compact:
+local architecture rules, exact commands, live gates, evidence paths, and risk
+policy belong here; reusable loop mechanics stay in the skill.
+
+## Project Identity
+
+- Repository: \`${context.projectRoot}\`
+- Detected stack: ${context.stack.length > 0 ? context.stack.join(", ") : "not detected"}
+- Detected layout:
+${listOrNone(layout)}
+
+Review and refine this section manually. The bootstrap script uses heuristics
+and does not understand product intent.
+
+## Governing Documents
+
+Detected:
+
+${listOrNone(context.governingDocs)}
+
+Agents must read the governing docs that apply to the target scope before
+starting a loop.
+
+## Architecture Orientation
+
+${context.architectureOrientation || "- none detected"}
+
+Use this as the first navigation map for Impact Triage and reviewer context.
+Expand the original architecture docs only when the active scope needs more
+detail.
+
+## Local Invariants
+
+Replace or extend these draft bullets with project-specific rules:
+
+- Preserve stable public contracts unless the approved plan says otherwise.
+- Do not add silent fallbacks or bypasses for required runtime behavior.
+- Validate boundary inputs before domain logic.
+- Keep evidence synchronized with implementation and verification.
+
+## Runtime Protocol
+
+- Use this root \`AGENTIC_LOOP.md\` as the only runtime protocol for ordinary
+  implementation loops.
+- Do not also load the global \`references/loop-protocol.md\` unless updating,
+  debugging, or bootstrapping the skill itself.
+- Start from supplied \`SPEC_FILE\`, \`PLAN_FILE\`, and \`CHECKLIST_FILE\`.
+- Run Impact Triage, then implement the next incomplete checklist slice before
+  broad review.
+- Reviewers validate completed implementation slices and plan gaps; they do not
+  own product scope.
+- Fix all P0/P1 findings before stopping. Fix P2 findings unless each one is
+  recorded as accepted risk with reason, residual risk, and follow-up owner or
+  gate.
+- Use subagents only when the user explicitly authorizes delegation or parallel
+  agent work. Treat authorized subagents as visible ephemeral workers:
+  \`spawn_agent\` with \`fork_context: false\` by default, pass compact packet
+  context, keep them visible while running, collect the result, then call
+  \`close_agent\` after integration.
+
+## Token And State Controls
+
+- Build a reviewer context packet with Architecture Orientation before
+  dispatching reviewers.
+- Use \`.agentic-loop/context.md\`, \`.agentic-loop/findings.md\`,
+  \`.agentic-loop/verification.md\`, \`.agentic-loop/traceability.md\`, and
+  \`.agentic-loop/delta.md\` for reusable state when evidence grows large.
+- Keep \`Current State\` at the top of the evidence file.
+- Use stable plan/checklist IDs, short item hashes, adaptive P2 caps,
+  delta-only re-review, and matrix-first final replay.
+- In final replay, read all changed, new, gap, blocked, accepted-risk, and
+  open-finding rows. Spot-check unchanged verified rows by deterministic item
+  hash instead of rereading the full plan every round.
+
+## Progress Beacons
+
+Emit mandatory user-visible chat/commentary updates after orientation/triage,
+implementation slices, reviewer batches, repair decisions, meaningful
+verification, and before final replay. This applies even in short loops when
+findings, fixes, or verification events occur. Evidence or \`.agentic-loop\`
+writes do not satisfy the beacon. Say what was found, what was fixed, what
+remains, and what happens next. Continue working unless the user asks to pause
+or redirect.
+
+## Project Scripts
+
+Detected preferred root verification scripts:
+
+${options.includeAllScripts ? scriptTable(context.scripts) : scriptTableForCommands(context.scripts, context.verificationCommands)}
+
+${options.includeAllScripts ? "" : "Bootstrap omitted non-verification root scripts to keep this file compact. Regenerate with `--include-all-scripts` only when the full script list is useful."}
+
+## Default Verification Commands
+
+Detected candidates:
+
+${listOrNone(unique([...context.verificationCommands, ...context.workspaceVerificationCommands]))}
+
+Refine this list by target area and keep exact package/workspace commands.
+
+## Live Gates And Environment
+
+Potential environment or live-gate names found in docs/scripts:
+
+${listOrNone(context.envNames)}
+
+Rules:
+
+- Do not read or print secret values from \`.env\` files.
+- Live gates are opt-in unless the user explicitly authorizes them.
+- Record exact commands and outcomes for every live gate that is run.
+
+## Evidence Skeleton
+
+\`\`\`markdown
+## Current State
+
+- active slice:
+- runtime protocol: AGENTIC_LOOP.md
+- plan/checklist ids changed:
+- open findings:
+- accepted risks:
+- verification matrix status:
+- traceability matrix status:
+- latest delta packet:
+
+## Agentic Review Loop Round N, YYYY-MM-DD
+
+Scope:
+- SPEC_FILE:
+- PLAN_FILE:
+- CHECKLIST_FILE:
+
+Impact triage:
+- size:
+- risk axes:
+- selected reviewer roles:
+- omitted reviewer roles:
+- max rounds:
+
+Loop state artifacts:
+- reviewer context packet: .agentic-loop/context.md
+- finding ledger: .agentic-loop/findings.md
+- verification matrix: .agentic-loop/verification.md
+- traceability matrix: .agentic-loop/traceability.md
+- delta review packet: .agentic-loop/delta.md
+
+Read and output budget:
+- reviewer read mode: packet-only | targeted-extra | scope-expanded
+- extra files read:
+- command output summary:
+- full logs/artifacts:
+
+Findings:
+- P1:
+- P2:
+
+Verification:
+- \`command\`: passed | failed | blocked
+
+Accepted risks:
+- none
+
+Final plan replay:
+- clean | gaps fixed | gaps blocked
+\`\`\`
+
+## Accepted Risk Policy
+
+P0/P1 may not be accepted as risk.
+
+P2 may be accepted only when evidence records:
+
+- finding;
+- reason it is acceptable now;
+- residual risk;
+- follow-up owner or gate.
+
+The final answer must report every P2 accepted risk. If there are none, say so.
+
+## Stop Criteria
+
+The loop may stop only when checklist items in scope are implemented, blocked,
+or accepted as risk; open P0/P1 findings are gone; P2 findings are fixed or
+recorded; required verification is passed or explicitly blocked; evidence is
+current; no child agent remains open; final matrix-first replay is clean; and
+the final answer reports P2 accepted risks and escaped findings.
+
+## Bootstrap Follow-Up Checklist
+
+- [ ] Project identity is manually corrected.
+- [ ] Governing docs list is complete.
+- [ ] Local invariants match the project.
+- [ ] Default verification commands are exact and tested.
+- [ ] Live gates are explicit and do not expose secrets.
+- [ ] Evidence file location and sidecar state policy are agreed.
 - [ ] This runbook is linked from the main agent instructions.
 `;
 }
@@ -930,7 +1324,7 @@ async function main() {
   }
 
   const context = await inspectProject(projectRoot);
-  const output = renderRunbook(context);
+  const output = args.selfContained ? renderRunbook(context) : renderCompactRunbook(context, args);
 
   if (args.dryRun) {
     process.stdout.write(output);

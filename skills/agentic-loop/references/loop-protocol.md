@@ -131,12 +131,32 @@ evidence file or in clearly linked evidence-adjacent files. These artifacts are
 the shared memory of the loop; reviewers should receive these instead of the
 full conversation or full evidence history when possible.
 
+Prefer canonical sidecar files under `.agentic-loop/` when the evidence file
+would otherwise grow large:
+
+- `.agentic-loop/context.md` for the latest reviewer context packet;
+- `.agentic-loop/findings.md` for the finding ledger;
+- `.agentic-loop/verification.md` for the verification matrix;
+- `.agentic-loop/traceability.md` for the traceability matrix;
+- `.agentic-loop/delta.md` for the latest delta review packet.
+
+Keep the evidence file as the index: link these files from `Loop state
+artifacts:` and keep only the rolling state plus command summaries inline.
+
 #### Reviewer Context Packet Template
 
 Keep the reviewer context packet short enough to paste into a reviewer prompt.
 Target 80 lines or fewer unless the plan scope is critical.
 Use `scripts/draft-context-packet.mjs --project . --evidence EVIDENCE_FILE
---max-lines 80` when available.
+--max-lines 80 --max-files 40 --include TARGET_SCOPE --scope "current slice"`
+when available. Use repeated `--include` and `--exclude` flags so reviewers see
+only the scoped worktree surfaces. Add `--forbidden-scope`, `--live-gates`,
+`--command`, and `--known-failure` when those values are known; empty sections
+are omitted instead of filled with placeholders. The script also reads
+`.agentic-loop/findings.md`, `.agentic-loop/verification.md`,
+`.agentic-loop/traceability.md`, and `.agentic-loop/delta.md` when present,
+prioritizing P0/P1 open findings, `gap_found`, blocked/accepted-risk rows,
+failed gates, then TODO rows.
 
 ```markdown
 Reviewer context packet:
@@ -171,7 +191,13 @@ traceability matrix. If the hash and verification refs are unchanged, later
 rounds may use the matrix plus targeted spot-checks instead of rereading the
 full item text.
 Use `scripts/build-traceability-index.mjs --plan PLAN_FILE --checklist
-CHECKLIST_FILE` when creating or refreshing item IDs and hashes.
+CHECKLIST_FILE --existing .agentic-loop/traceability.md` when creating or
+refreshing item IDs and hashes. Reuse existing IDs by hash before assigning new
+ones so plan insertions do not force later rows to churn.
+Headings are not indexed by default; pass `--include-headings` only when
+headings are actionable plan/checklist items.
+For large plans, use `--section`, `--ids`, and `--status` to emit only the
+active slice or replay target.
 
 #### Finding Ledger Schema
 
@@ -212,6 +238,11 @@ before spot-checking code and evidence.
 Allowed statuses: `implemented_and_verified`, `implemented_fail_closed`,
 `blocked_live_or_external_gate`, `accepted_risk`, `gap_found`.
 
+Final replay should read all `gap_found`, `accepted_risk`,
+`blocked_live_or_external_gate`, changed-hash, new, and open-finding rows. For
+unchanged verified rows, use a deterministic spot check from the item hash
+instead of rereading the whole plan every round.
+
 #### Delta Review Packet
 
 After repairs, send reviewers a delta packet unless a full re-review trigger is
@@ -247,6 +278,23 @@ evidence history.
 - latest delta packet:
 ```
 
+#### Architecture Orientation
+
+When the project has `ARCHITECTURE.md` or `docs/ARCHITECTURE.md`, bootstrap and
+context-packet helpers should include a compact Architecture Orientation block.
+Use it as the first map for ownership, stack, runtime/data-flow boundaries,
+forbidden shortcuts, and reviewer-role selection.
+
+The owning agent should read the compact Architecture Orientation before Impact
+Triage. Read the full architecture document only when the active slice touches
+unclear ownership, cross-package boundaries, workflow/runtime behavior,
+persistence, browser-facing data flow, or a forbidden shortcut.
+
+Reviewer packets should include the Architecture Orientation unless the user
+explicitly disables it or the scope is docs-only and architecture-independent.
+Subagents should receive the compact orientation plus exact target files rather
+than the full architecture document by default.
+
 #### Read Budget And Output Budget
 
 Reviewer read budget:
@@ -268,6 +316,49 @@ Evidence output budget:
 
 Use `scripts/validate-loop-state.mjs --evidence EVIDENCE_FILE` before final
 replay and before stopping when available.
+
+## Progress Beacons
+
+Progress Beacons are mandatory user-visible chat/commentary updates during the
+loop. They are not approval gates, and they do not stop the work. Writing the
+same information only into the evidence file or `.agentic-loop` sidecars does
+not satisfy this requirement.
+
+Emit a beacon:
+
+- after orientation and Impact Triage;
+- after an implementation slice is patched;
+- when reviewer batches finish, before repair starts;
+- after P0/P1 repair decisions are made;
+- after meaningful verification passes or failures;
+- before final adversarial plan replay;
+- when a live gate, credentialed check, or external service blocks progress.
+
+This applies even in short loops when any reviewer finding, repair decision,
+patch, verification result, or blocked gate occurs. If a phase has no findings
+or no changes, emit a compact no-findings/no-change beacon only when it helps
+the user understand why the loop is moving on.
+
+Keep each beacon to 2-5 bullets or 1-3 short paragraphs:
+
+- what was found;
+- what was fixed or changed;
+- what remains open or risky;
+- what will be repaired or verified next.
+
+Default format:
+
+```text
+Progress Beacon:
+- found:
+- fixed:
+- still open:
+- next:
+```
+
+Do not paste long logs, diffs, secrets, or raw credential values. Continue
+working after the beacon unless the user explicitly says to pause, stop, or
+change direction.
 
 ## Automatic Project Runbook Preflight
 
@@ -349,8 +440,10 @@ verification.
 
 Responsibilities:
 
-- read the spec, plan, checklist, current evidence, `AGENTIC_LOOP.md`, and
-  governing docs;
+- read `AGENTIC_LOOP.md`, current evidence state, active traceability rows,
+  and governing docs relevant to the target scope;
+- open full spec, plan, or checklist text only when active rows/excerpts are
+  missing, stale, ambiguous, risky, or marked as gap/blocked/accepted-risk;
 - inspect current code before editing;
 - implement the next checklist item or repair batch;
 - keep changes scoped;
@@ -380,24 +473,29 @@ roles sequentially as self-review and label them as such.
   marked complete without opt-in runs, accepted risks without reason/residual
   risk/follow-up, missing command summaries, documented commands or modes that
   were never implemented or verified.
-- **Final Plan Replay Reviewer**: every plan step and checklist item literally
-  matches implementation, verification, blocked status, or accepted risk;
-  documented commands and environment contracts do not drift from runtime
-  reality; features are not merely documented; checked items use direct proof
-  when practical; blocked items should not be implementable now.
+- **Final Plan Replay Reviewer**: matrix-first plan replay; changed, risky,
+  missing-proof, open-finding, accepted-risk, blocked, and sampled rows match
+  implementation, verification, blocked status, or accepted risk; documented
+  commands and environment contracts do not drift from runtime reality;
+  features are not merely documented; checked items use direct proof when
+  practical; blocked items should not be implementable now.
 
 ## Round Algorithm
 
 ### Round 0: Orientation
 
 1. Ensure root `AGENTIC_LOOP.md` exists; auto-bootstrap it if missing.
-2. Read spec, plan, checklist, evidence, `AGENTIC_LOOP.md`, and governing docs.
+2. Read `AGENTIC_LOOP.md`, its Architecture Orientation, the current evidence state, and the plan/checklist
+   rows needed for the active slice. Read full spec/plan/checklist text only
+   when matrix rows or excerpts are missing, changed, risky, or ambiguous.
 3. Run Impact Triage and choose review depth, reviewer roles, and max rounds.
 4. Build the reviewer context packet and initialize or update the finding
    ledger, verification matrix, and traceability matrix.
 5. Run `git status --short`.
 6. Identify unrelated dirty worktree changes.
 7. Build a local round plan from the checklist.
+8. Emit a Progress Beacon summarizing scope, architecture owner map, selected
+   reviewer roles, and immediate implementation slice.
 
 ### Round 1: Implementation Pass
 
@@ -407,12 +505,18 @@ roles sequentially as self-review and label them as such.
 3. Make narrowly scoped edits.
 4. Run the smallest relevant verification command.
 5. Update checklist and evidence only after verification.
+6. Emit a Progress Beacon summarizing changed files, verification result, and
+   which reviewer roles will challenge the slice.
 
 ### Round 2: Independent Review Pass
 
 Dispatch or perform the reviewer roles selected by Impact Triage. Reviewers
 validate completed implementation slices against the supplied plan. They do not
 choose new product scope.
+
+When reviewer batches finish, emit a Progress Beacon with the deduplicated
+finding count by severity, the highest-risk findings, accepted-risk candidates,
+and the repair order.
 
 Findings must include:
 
@@ -453,6 +557,8 @@ Rules:
 3. Fix P2 unless accepted risk is justified.
 4. Add regression tests where practical.
 5. Update evidence with fixes and verification.
+6. Emit a Progress Beacon summarizing fixed finding ids, deferred or accepted
+   P2 candidates, and verification to rerun.
 
 ### Round 4: Verification Pass
 
@@ -469,6 +575,10 @@ Run verification from narrow to broad:
 
 Live gates remain opt-in unless the user explicitly authorizes them.
 
+Emit a Progress Beacon after meaningful verification, especially when a command
+fails, a live gate is blocked, or a broader verification command becomes
+necessary.
+
 ### Round 5: Final Adversarial Plan Replay
 
 Replay the user's manual audit prompt:
@@ -477,17 +587,18 @@ Replay the user's manual audit prompt:
 Take the plan and go point by point. For each point, analyze how well it is implemented, find gaps, and fix them immediately.
 ```
 
-For every plan step and checklist item, classify it as:
+Use the traceability matrix first. Read full plan/checklist text only for rows
+that are changed, new, missing implementation refs, missing verification refs,
+gap-found, blocked, accepted-risk, linked to open findings, or selected by the
+deterministic hash spot-check.
+
+For every replayed row, classify it as:
 
 - `implemented_and_verified`;
 - `implemented_fail_closed`;
 - `blocked_live_or_external_gate`;
 - `accepted_risk`;
 - `gap_found`.
-
-Use the traceability matrix first when item IDs, item hashes, implementation
-refs, and verification refs are current; reread full item text only for changed,
-missing, risky, or sampled rows.
 
 For every documented command, environment variable, URL, port, feature flag, or
 mode, verify that code implements it, tests prove it, it is blocked, or it is
@@ -499,6 +610,9 @@ least one additional review round.
 
 The loop may only stop after a clean final plan replay and one subsequent clean
 review round.
+
+Emit a Progress Beacon before final replay and another only if replay finds
+gaps that require repair.
 
 ## Next Round Decision
 
@@ -668,7 +782,16 @@ When subagents are used:
 - keep implementation-scope ownership with the owning agent;
 - do not delegate the immediate critical-path blocker if the owning agent can
   fix it directly faster;
-- close subagents when their findings have been integrated.
+- treat subagents as visible ephemeral workers, not durable project chats;
+- call `spawn_agent` with `fork_context: false` by default and pass only the
+  compact context packet; use `fork_context: true` only when the full current
+  thread is explicitly required and record that reason in evidence;
+- keep each spawned child open while it is actively running so Codex App can
+  show active subagent status in the status panel;
+- after `wait_agent` returns a result, call `close_agent` for that child once
+  findings or patches are integrated;
+- do not leave idle, completed, failed, or superseded subagents open across a
+  repair round, batch boundary, commit, or final response.
 
 Use `references/reviewer-prompts.md` for reviewer and bounded repair prompt
 templates.
@@ -687,6 +810,10 @@ If a verification command fails:
 
 If the root cause is unclear, create or update a project debugging note and
 continue systematic debugging according to the project runbook.
+
+Before stopping or committing a completed batch, verify that no spawned
+subagents remain open. If a subagent cannot be closed, record it as a blocked
+operational issue and do not claim the loop is fully closed.
 
 ## Escaped Findings
 

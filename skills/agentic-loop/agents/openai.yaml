@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agentic Loop"
+  short_description: "Plan execution with embedded review"
+  default_prompt: "Use $agentic-loop to implement the approved plan through checklist-driven implement, review, repair, and verify rounds."
+policy:
+  allow_implicit_invocation: true

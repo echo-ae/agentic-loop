@@ -6,7 +6,7 @@ Purpose: define the project-specific workflow for turning an approved spec,
 plan, and checklist into shipped, verified work. This is an implementation-first
 loop with embedded review, not a review-only workflow.
 
-This file extends the global `$agentic-reviewer-loop` skill. It does not replace
+This file extends the global `$agentic-loop` skill. It does not replace
 feature specs, implementation plans, checklists, evidence files, architecture
 docs, or repository instructions.
 
@@ -25,11 +25,26 @@ docs, or repository instructions.
 - Migration or roadmap docs:
 - Test and verification docs:
 
-## 3. Non-Negotiable Invariants
+## 3. Architecture Orientation
+
+Keep a compact map derived from `ARCHITECTURE.md` or
+`docs/ARCHITECTURE.md`:
+
+- source architecture docs:
+- key ownership boundaries:
+- runtime and data-flow summary:
+- forbidden shortcuts:
+- stack and package map:
+- sections to expand for common work areas:
+
+Use this map before Impact Triage and reviewer dispatch. Read the full
+architecture docs only when the active scope needs more detail.
+
+## 4. Non-Negotiable Invariants
 
 - ...
 
-## 4. Required Inputs
+## 5. Required Inputs
 
 Before starting a loop, identify:
 
@@ -44,7 +59,7 @@ Before starting a loop, identify:
 If any required planning artifact is missing, create or update it first. Do not
 start a multi-round loop from an informal task description alone.
 
-## 5. Implementation-First Contract
+## 6. Implementation-First Contract
 
 When `SPEC_FILE`, `PLAN_FILE`, and `CHECKLIST_FILE` are supplied, the loop
 starts from execution, not review.
@@ -61,7 +76,7 @@ Required behavior:
 - the loop cannot stop because review is clean if checklist items remain
   unimplemented, unverified, unblocked, or unaccepted as risk.
 
-## 6. When To Use The Loop
+## 7. When To Use The Loop
 
 Use the loop only when:
 
@@ -73,7 +88,7 @@ Use the loop only when:
 
 Do not use it for tiny fixes, quick answers, or unapproved exploratory work.
 
-## 7. Impact Triage
+## 8. Impact Triage
 
 Before dispatching reviewers, classify the work and record the decision in
 evidence.
@@ -109,7 +124,7 @@ Review depth:
 Evidence must record size, risk axes, selected reviewer roles, omitted reviewer
 roles, max rounds, and rationale.
 
-## 8. Token And Latency Efficiency Rules
+## 9. Token And Latency Efficiency Rules
 
 Quality gates take precedence over token savings. These rules reduce repeated
 reading and reviewer overlap without weakening required review depth.
@@ -125,6 +140,7 @@ Before dispatching reviewers, the owning agent should build a compact reviewer
 context packet:
 
 - scope, forbidden scope, and live gates;
+- Architecture Orientation from this runbook unless explicitly irrelevant;
 - Impact Triage decision and selected reviewer roles;
 - changed files, diffstat, and short change summary;
 - relevant plan/checklist excerpts, not the full plan when a narrow excerpt is
@@ -152,9 +168,29 @@ persistence, E2E boundaries, or final replay found a gap.
 For medium, large, and critical loops, maintain compact state artifacts in the
 evidence file or in clearly linked evidence-adjacent files.
 
+Prefer canonical sidecar files under `.agentic-loop/` when inline evidence
+would become noisy:
+
+- `.agentic-loop/context.md`
+- `.agentic-loop/findings.md`
+- `.agentic-loop/verification.md`
+- `.agentic-loop/traceability.md`
+- `.agentic-loop/delta.md`
+
+Keep the evidence file as the index by linking these files from `Loop state
+artifacts:` and keeping only rolling state plus command summaries inline.
+
 Reviewer context packet target: 80 lines or fewer unless scope is critical.
 Use `scripts/draft-context-packet.mjs --project . --evidence EVIDENCE_FILE
---max-lines 80` when available.
+--max-lines 80 --max-files 40 --include TARGET_SCOPE --scope "current slice"`
+when available. Use repeated `--include` and `--exclude` flags to keep packets
+scoped to the current work. Add `--forbidden-scope`, `--live-gates`,
+`--command`, and `--known-failure` when those values are known; empty sections
+are omitted instead of filled with placeholders. The script also reads
+`.agentic-loop/findings.md`, `.agentic-loop/verification.md`,
+`.agentic-loop/traceability.md`, and `.agentic-loop/delta.md` when present,
+prioritizing P0/P1 open findings, `gap_found`, blocked/accepted-risk rows,
+failed gates, then TODO rows.
 
 ```markdown
 Reviewer context packet:
@@ -183,7 +219,13 @@ Use stable IDs instead of repeating long prose:
 When practical, record a short content hash for every plan/checklist item in the
 traceability matrix.
 Use `scripts/build-traceability-index.mjs --plan PLAN_FILE --checklist
-CHECKLIST_FILE` when available.
+CHECKLIST_FILE --existing .agentic-loop/traceability.md` when available, so
+stable IDs survive plan insertions and later rounds can review only changed
+rows.
+Headings are not indexed by default; pass `--include-headings` only when
+headings are actionable plan/checklist items.
+For large plans, use `--section`, `--ids`, and `--status` to emit only the
+active slice or replay target.
 
 Finding ledger:
 
@@ -205,6 +247,10 @@ Traceability matrix:
 | id | item hash | implementation refs | verification refs | evidence refs | status |
 | --- | --- | --- | --- | --- | --- |
 ```
+
+Final replay reads all changed, new, gap, blocked, accepted-risk, and
+open-finding rows. For unchanged verified rows, use deterministic hash-based
+spot checks instead of rereading the full plan every round.
 
 Delta review packet:
 
@@ -242,7 +288,42 @@ command and exit status, and link full logs/artifacts instead of pasting them.
 Use `scripts/validate-loop-state.mjs --evidence EVIDENCE_FILE` before final
 replay and before stopping when available.
 
-## 9. Review Roles
+## 10. Progress Beacons
+
+Progress Beacons are mandatory user-visible chat/commentary updates during the
+loop. They are not approval gates, and they do not stop the work. Writing the
+same information only into the evidence file or `.agentic-loop` sidecars does
+not satisfy this requirement.
+
+Emit a Progress Beacon:
+
+- after orientation and Impact Triage;
+- after an implementation slice is patched;
+- when reviewer batches finish, before repair starts;
+- after P0/P1 repair decisions are made;
+- after meaningful verification passes or failures;
+- before final adversarial plan replay;
+- when a live gate, credentialed check, or external service blocks progress.
+
+This applies even in short loops when any reviewer finding, repair decision,
+patch, verification result, or blocked gate occurs.
+
+Each beacon should briefly say what was found, what was fixed, what remains
+open or risky, and what will be repaired or verified next. Do not paste long
+logs, diffs, secrets, or raw credential values. Continue working unless the
+user explicitly asks to pause or redirect.
+
+Default format:
+
+```text
+Progress Beacon:
+- found:
+- fixed:
+- still open:
+- next:
+```
+
+## 11. Review Roles
 
 Use the global skill roles unless this project overrides them:
 
@@ -257,7 +338,7 @@ Use the global skill roles unless this project overrides them:
 The owning agent must keep the plan moving. Reviewers validate completed slices
 and identify gaps, but they do not own the implementation roadmap.
 
-## 10. Verification Commands
+## 12. Verification Commands
 
 Default commands:
 
@@ -273,13 +354,13 @@ Targeted commands by area:
 - Persistence:
 - E2E:
 
-## 11. Live Gates
+## 13. Live Gates
 
 Live or external checks are opt-in unless the user explicitly authorizes them.
 
 - ...
 
-## 12. Evidence Rules
+## 14. Evidence Rules
 
 Evidence file format:
 
@@ -373,7 +454,7 @@ Escaped findings from prior loop:
 Do not paste huge command logs. Summarize relevant results and keep exact
 commands.
 
-## 13. Checklist Update Rules
+## 15. Checklist Update Rules
 
 Only check an item when:
 
@@ -384,7 +465,7 @@ Only check an item when:
 Do not check items because code "looks done". Do not leave stale checked items
 after finding a gap.
 
-## 14. Subagent Dispatch Rules
+## 16. Subagent Dispatch Rules
 
 When subagents are used:
 
@@ -403,9 +484,18 @@ When subagents are used:
 - keep implementation-scope ownership with the owning agent;
 - do not delegate the immediate critical-path blocker when the owning agent can
   fix it directly faster;
-- close subagents when their findings have been integrated.
+- treat subagents as visible ephemeral workers, not durable project chats;
+- call `spawn_agent` with `fork_context: false` by default and pass only the
+  compact context packet; use `fork_context: true` only when the full current
+  thread is explicitly required and record that reason in evidence;
+- keep each spawned child open while it is actively running so Codex App can
+  show active subagent status in the status panel;
+- after `wait_agent` returns a result, call `close_agent` for that child once
+  findings or patches are integrated;
+- do not leave idle, completed, failed, or superseded subagents open across a
+  repair round, batch boundary, commit, or final response.
 
-## 15. Reviewer Finding Batch Rules
+## 17. Reviewer Finding Batch Rules
 
 Reviewers must batch material findings instead of stopping after the first good
 issue.
@@ -425,7 +515,7 @@ Rules:
 - end with `No more material findings within scope` or
   `Stopped at finding cap`.
 
-## 16. Failure Handling
+## 18. Failure Handling
 
 If a verification command fails:
 
@@ -441,7 +531,7 @@ Project debugging-note location:
 
 - ...
 
-## 17. Next Round Decision
+## 19. Next Round Decision
 
 Start another review round when any of these are true:
 
@@ -455,7 +545,7 @@ Start another review round when any of these are true:
 - a documented command, environment flag, URL, port, or mode was corrected.
 - the finding ledger changed status for any P0/P1/P2 item.
 
-## 18. Accepted Risk Policy
+## 20. Accepted Risk Policy
 
 P0/P1 may not be accepted as risk.
 
@@ -466,7 +556,7 @@ P2 may be accepted only when the evidence records:
 - residual risk;
 - follow-up owner or gate.
 
-## 19. Stop Criteria
+## 21. Stop Criteria
 
 The loop may stop only when:
 
@@ -479,6 +569,7 @@ The loop may stop only when:
 - evidence records the Impact Triage decision and selected review depth;
 - evidence records token/latency controls: context packet, adaptive P2 cap,
   re-review mode, and finding ledger status;
+- no child agent remains open;
 - live gates are passed or explicitly left open as opt-in gates;
 - final adversarial plan replay is recorded and clean;
 - documented commands, flags, URLs, ports, and modes are implemented,
@@ -492,7 +583,7 @@ Recommended budget rule: default maximum is 10 review rounds. If open P0/P1
 findings remain, stop and report blockers instead of continuing blindly. The
 user can explicitly authorize another bounded block of rounds.
 
-## 20. Escaped Findings
+## 22. Escaped Findings
 
 If a later manual pass finds a P0/P1/P2 after the loop stopped:
 
@@ -502,7 +593,7 @@ If a later manual pass finds a P0/P1/P2 after the loop stopped:
 4. strengthen this runbook or the narrower plan/checklist when process failed;
 5. restart the stability requirement.
 
-## 21. Final Response Requirements
+## 23. Final Response Requirements
 
 The final answer must state:
 
