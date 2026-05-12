@@ -13,7 +13,8 @@ const requiredFiles = [
   "references/loop-protocol.md",
   "references/project-runbook-template.md",
   "references/reviewer-prompts.md",
-  "scripts/bootstrap-project-runbook.mjs"
+  "scripts/bootstrap-project-runbook.mjs",
+  "scripts/draft-context-packet.mjs"
 ];
 
 const errors = [];
@@ -84,8 +85,15 @@ const bootstrapScript = await readFile(
   path.join(skillDir, "scripts", "bootstrap-project-runbook.mjs"),
   "utf8"
 ).catch(() => "");
+const draftContextPacketScript = await readFile(
+  path.join(skillDir, "scripts", "draft-context-packet.mjs"),
+  "utf8"
+).catch(() => "");
 if (!bootstrapScript.includes('const DEFAULT_OUTPUT = "AGENTIC_LOOP.md";')) {
   errors.push("bootstrap script must default to root AGENTIC_LOOP.md.");
+}
+if (!draftContextPacketScript.includes("Reviewer Context Packet Draft")) {
+  errors.push("draft context packet script must emit Reviewer Context Packet Draft.");
 }
 for (const [label, text] of [
   ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
@@ -158,7 +166,11 @@ for (const [label, text] of [
     "finding ledger",
     "verification matrix",
     "traceability matrix",
-    "delta review packet"
+    "delta review packet",
+    "Current State",
+    "runtime protocol",
+    "item hash",
+    "Read and output budget"
   ]) {
     if (!text.includes(phrase)) {
       errors.push(`${label} must include loop-state artifact phrase: ${phrase}.`);
@@ -169,6 +181,9 @@ for (const [label, text] of [
 const reviewerPrompts = await readFile(path.join(skillDir, "references", "reviewer-prompts.md"), "utf8").catch(() => "");
 if (!reviewerPrompts.includes("Extra files read")) {
   errors.push("reviewer prompts must require reviewers to report extra files read.");
+}
+if (!reviewerPrompts.includes("packet-only") || !reviewerPrompts.includes("targeted-extra")) {
+  errors.push("reviewer prompts must require reviewer read mode classification.");
 }
 
 if (errors.length > 0) {

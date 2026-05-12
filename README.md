@@ -32,7 +32,9 @@ verification commands, live gates, and accepted-risk policy.
         │   ├── loop-protocol.md
         │   ├── project-runbook-template.md
         │   └── reviewer-prompts.md
-        └── scripts/bootstrap-project-runbook.mjs
+        └── scripts/
+            ├── bootstrap-project-runbook.mjs
+            └── draft-context-packet.mjs
 ```
 
 ## Install In Codex App On macOS
@@ -122,6 +124,21 @@ For medium and larger work, the loop records reusable state artifacts: reviewer
 context packet, finding ledger, verification matrix, traceability matrix, and
 delta review packet. These keep later review rounds focused on changed facts
 instead of re-reading the whole plan and evidence history.
+
+Additional token controls:
+
+- use one runtime protocol per loop, preferring project `AGENTIC_LOOP.md`;
+- keep a rolling `Current State` at the top of evidence;
+- use stable plan/checklist IDs and short item hashes in traceability rows;
+- require reviewer read mode and `Extra files read`;
+- summarize command output and link full logs/artifacts instead of pasting them.
+
+Draft a context packet from repository state:
+
+```bash
+node skills/agentic-reviewer-loop/scripts/draft-context-packet.mjs \
+  --project /path/to/project
+```
 
 The skill intentionally separates two layers:
 

@@ -58,6 +58,7 @@ Do not stop after the first finding.
 Group same-root-cause findings instead of repeating them.
 End with "No more material findings within scope" or "Stopped at finding cap".
 End with "Extra files read: none" or list every extra file read plus why it was needed.
+Classify read mode as `packet-only`, `targeted-extra`, or `scope-expanded`.
 Do not suggest unrelated refactors.
 Do not edit files.
 
@@ -84,6 +85,7 @@ Suggested verification: exact command or assertion
 - End with `No more material findings within scope` or
   `Stopped at finding cap`.
 - End with `Extra files read: none` or a file-by-file reason list.
+- Include read mode: `packet-only`, `targeted-extra`, or `scope-expanded`.
 
 ## Architecture Reviewer Focus
 

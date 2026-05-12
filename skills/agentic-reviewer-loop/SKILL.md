@@ -63,6 +63,13 @@ loop from an informal task description alone.
   review packet.
 - The canonical artifacts are named exactly: Reviewer context packet, finding
   ledger, verification matrix, traceability matrix, delta review packet.
+- Use one runtime protocol per loop: project `AGENTIC_LOOP.md` when present;
+  global references only for bootstrap, updates, or skill debugging.
+- Keep evidence token-efficient with a rolling `Current State`, stable
+  plan/checklist IDs, short item hashes, reviewer read budgets, and command
+  output summaries instead of full logs.
+- Apply the Read and output budget: reviewers declare read mode and evidence
+  summarizes command output while linking full logs/artifacts.
 - Require reviewers to batch material findings: all P0/P1, P2 up to the
   adaptive cap, no P3 unless requested, and no stopping after the first issue.
 - Run a final adversarial plan replay before stopping.
@@ -80,6 +87,13 @@ Bootstrap a local runbook:
 
 ```bash
 node "$CODEX_HOME/skills/agentic-reviewer-loop/scripts/bootstrap-project-runbook.mjs" \
+  --project .
+```
+
+Draft a reviewer context packet from repository state:
+
+```bash
+node "$CODEX_HOME/skills/agentic-reviewer-loop/scripts/draft-context-packet.mjs" \
   --project .
 ```
 

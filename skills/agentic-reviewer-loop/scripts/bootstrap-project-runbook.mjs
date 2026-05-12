@@ -482,6 +482,13 @@ roles, max rounds, and rationale.
 Quality gates take precedence over token savings. These rules reduce repeated
 reading and reviewer overlap without weakening required review depth.
 
+Use a single runtime protocol per loop:
+
+- if root \`AGENTIC_LOOP.md\` exists, treat it as the runtime protocol;
+- use the global skill protocol for bootstrap, updates, or debugging the skill
+  itself, not as a second protocol inside reviewer prompts;
+- do not load both project and global protocols into reviewer prompts.
+
 Before dispatching reviewers, the owning agent should build a compact reviewer
 context packet:
 
@@ -532,6 +539,16 @@ Reviewer context packet:
 - accepted risks:
 \`\`\`
 
+Use stable IDs instead of repeating long prose:
+
+- plan items: \`PLAN-001\`, \`PLAN-002\`, ...
+- checklist items: \`CHK-001\`, \`CHK-002\`, ...
+- verification gates: \`GATE-001\`, \`GATE-002\`, ...
+- findings: \`FIND-001\`, \`FIND-002\`, ...
+
+When practical, record a short content hash for every plan/checklist item in the
+traceability matrix.
+
 Finding ledger:
 
 \`\`\`markdown
@@ -549,8 +566,8 @@ Verification matrix:
 Traceability matrix:
 
 \`\`\`markdown
-| plan/checklist item | implementation refs | verification refs | evidence refs | status |
-| --- | --- | --- | --- | --- |
+| id | item hash | implementation refs | verification refs | evidence refs | status |
+| --- | --- | --- | --- | --- | --- |
 \`\`\`
 
 Delta review packet:
@@ -563,6 +580,28 @@ Delta review packet:
 - remaining open findings:
 - new or changed risks:
 \`\`\`
+
+Rolling current state:
+
+\`\`\`markdown
+## Current State
+
+- active slice:
+- runtime protocol:
+- plan/checklist ids changed:
+- open findings:
+- accepted risks:
+- verification matrix status:
+- traceability matrix status:
+- latest delta packet:
+\`\`\`
+
+Reviewer read budget defaults to the context packet, finding ledger, relevant
+matrix rows, and exact files in scope. Extra files are allowed only to validate a
+concrete finding or resolve a stated uncertainty.
+
+Evidence output budget: summarize command output in 3-8 lines, keep exact
+command and exit status, and link full logs/artifacts instead of pasting them.
 
 ## 10. Review Roles
 
@@ -621,6 +660,17 @@ Rules:
 Append a dated section to the evidence file after each meaningful round:
 
 \`\`\`markdown
+## Current State
+
+- active slice:
+- runtime protocol:
+- plan/checklist ids changed:
+- open findings:
+- accepted risks:
+- verification matrix status:
+- traceability matrix status:
+- latest delta packet:
+
 ## Agentic Review Loop Round N, YYYY-MM-DD
 
 Scope:
@@ -652,6 +702,12 @@ Loop state artifacts:
 - verification matrix:
 - traceability matrix:
 - delta review packet:
+
+Read and output budget:
+- reviewer read mode: packet-only | targeted-extra | scope-expanded
+- extra files read:
+- command output summary:
+- full logs/artifacts:
 
 Review roles run (selected roles only; omitted roles must be explained in
 Impact triage):
