@@ -4,9 +4,11 @@ Use these prompts for read-only reviewer subagents or for labeled self-review
 passes when subagents are not authorized.
 
 When these prompts are sent to subagents, treat them as visible ephemeral workers:
-use compact packet context, avoid full-thread forks unless required, keep active
-children open while they are running so Codex App can show their status panel
-state, and close each child agent after the owning agent integrates its findings.
+spawn normal Codex App subagents so their names and active status are visible in
+the status panel, use compact packet context, keep active children open while
+they are running, close each child agent after the owning agent integrates its
+findings, and do not create, promote, or preserve child-agent threads as durable
+chat-history items.
 
 ## Impact Triage Reviewer Prompt
 

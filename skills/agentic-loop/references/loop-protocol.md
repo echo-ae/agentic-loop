@@ -320,40 +320,30 @@ replay and before stopping when available.
 ## Progress Beacons
 
 Progress Beacons are mandatory user-visible chat/commentary updates during the
-loop. They are not approval gates, and they do not stop the work. Writing the
-same information only into the evidence file or `.agentic-loop` sidecars does
-not satisfy this requirement.
+loop, but they are intentionally sparse. Emit exactly one beacon per review
+cycle, after reviewer batches are deduplicated and before repair starts. Do not
+emit separate beacons after orientation, implementation, verification, or final
+replay. Writing the same information only into the evidence file or
+`.agentic-loop` sidecars does not satisfy this requirement.
 
-Emit a beacon:
+The beacon answers only three questions:
 
-- after orientation and Impact Triage;
-- after an implementation slice is patched;
-- when reviewer batches finish, before repair starts;
-- after P0/P1 repair decisions are made;
-- after meaningful verification passes or failures;
-- before final adversarial plan replay;
-- when a live gate, credentialed check, or external service blocks progress.
+- how many findings exist by severity, including P0 when present;
+- which short classes of problems were found;
+- what the owning agent will repair or verify next.
 
-This applies even in short loops when any reviewer finding, repair decision,
-patch, verification result, or blocked gate occurs. If a phase has no findings
-or no changes, emit a compact no-findings/no-change beacon only when it helps
-the user understand why the loop is moving on.
-
-Keep each beacon to 2-5 bullets or 1-3 short paragraphs:
-
-- what was found;
-- what was fixed or changed;
-- what remains open or risky;
-- what will be repaired or verified next.
+If a review cycle has no findings, still emit one compact no-findings beacon.
+The only extra user-visible update allowed outside this cadence is a hard
+blocker that requires user input, credentials, or approval.
 
 Default format:
 
 ```text
 Progress Beacon:
-- found:
-- fixed:
-- still open:
-- next:
+Review Cycle N:
+- findings: P0=0 P1=0 P2=0 P3=0
+- classes: short issue classes, or none
+- repair now: concrete fixes or verification next
 ```
 
 Do not paste long logs, diffs, secrets, or raw credential values. Continue
@@ -494,8 +484,9 @@ roles sequentially as self-review and label them as such.
 5. Run `git status --short`.
 6. Identify unrelated dirty worktree changes.
 7. Build a local round plan from the checklist.
-8. Emit a Progress Beacon summarizing scope, architecture owner map, selected
-   reviewer roles, and immediate implementation slice.
+8. Do not emit a Progress Beacon during orientation; record scope, architecture
+   owner map, selected reviewer roles, and immediate implementation slice in
+   evidence or `.agentic-loop` state.
 
 ### Round 1: Implementation Pass
 
@@ -505,8 +496,8 @@ roles sequentially as self-review and label them as such.
 3. Make narrowly scoped edits.
 4. Run the smallest relevant verification command.
 5. Update checklist and evidence only after verification.
-6. Emit a Progress Beacon summarizing changed files, verification result, and
-   which reviewer roles will challenge the slice.
+6. Do not emit a Progress Beacon after implementation; record changed files,
+   verification result, and selected reviewer roles in evidence or sidecars.
 
 ### Round 2: Independent Review Pass
 
@@ -514,9 +505,8 @@ Dispatch or perform the reviewer roles selected by Impact Triage. Reviewers
 validate completed implementation slices against the supplied plan. They do not
 choose new product scope.
 
-When reviewer batches finish, emit a Progress Beacon with the deduplicated
-finding count by severity, the highest-risk findings, accepted-risk candidates,
-and the repair order.
+When reviewer batches finish, emit the single review-cycle Progress Beacon with
+finding counts by severity, short problem classes, and the repair order.
 
 Findings must include:
 
@@ -557,8 +547,8 @@ Rules:
 3. Fix P2 unless accepted risk is justified.
 4. Add regression tests where practical.
 5. Update evidence with fixes and verification.
-6. Emit a Progress Beacon summarizing fixed finding ids, deferred or accepted
-   P2 candidates, and verification to rerun.
+6. Do not emit a Progress Beacon after repair; record fixed finding ids,
+   deferred or accepted P2 candidates, and verification to rerun in evidence.
 
 ### Round 4: Verification Pass
 
@@ -575,9 +565,8 @@ Run verification from narrow to broad:
 
 Live gates remain opt-in unless the user explicitly authorizes them.
 
-Emit a Progress Beacon after meaningful verification, especially when a command
-fails, a live gate is blocked, or a broader verification command becomes
-necessary.
+Do not emit a Progress Beacon after verification. Record command results,
+blocked live gates, and broader verification needs in evidence or sidecars.
 
 ### Round 5: Final Adversarial Plan Replay
 
@@ -611,8 +600,8 @@ least one additional review round.
 The loop may only stop after a clean final plan replay and one subsequent clean
 review round.
 
-Emit a Progress Beacon before final replay and another only if replay finds
-gaps that require repair.
+Do not emit a Progress Beacon before final replay. If final replay finds gaps,
+record them as findings and include them in the next review-cycle beacon.
 
 ## Next Round Decision
 
@@ -782,10 +771,11 @@ When subagents are used:
 - keep implementation-scope ownership with the owning agent;
 - do not delegate the immediate critical-path blocker if the owning agent can
   fix it directly faster;
-- treat subagents as visible ephemeral workers, not durable project chats;
-- call `spawn_agent` with `fork_context: false` by default and pass only the
-  compact context packet; use `fork_context: true` only when the full current
-  thread is explicitly required and record that reason in evidence;
+- treat subagents as visible ephemeral workers, not durable project chats or
+  chat-history items;
+- spawn normal Codex App subagents so their names and active status are visible
+  in the status panel; pass the compact context packet and use full-thread
+  context only when explicitly required by the task;
 - keep each spawned child open while it is actively running so Codex App can
   show active subagent status in the status panel;
 - after `wait_agent` returns a result, call `close_agent` for that child once

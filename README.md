@@ -188,22 +188,21 @@ work gets two or three, and critical work gets stricter review plus bounded
 round limits.
 
 Authorized subagents are treated as visible ephemeral workers: the owning agent
-should spawn them with `fork_context: false` unless the full current thread is
-needed, keep them open while they are actively running so Codex App can show
-their status, collect their result, then close them with `close_agent` after
-integration so child threads do not remain as durable project chats.
+should spawn normal Codex App subagents so their names and active status remain
+visible in the status panel, keep them open while they are actively running,
+collect their result, then close them with `close_agent` after integration. The
+loop must not create, promote, or preserve child-agent threads as durable
+chat-history items.
 
 Reviewers batch findings within their assigned scope: all P0/P1, P2 up to the
 adaptive cap from Impact Triage, no P3 unless requested, and no stopping after
 the first issue.
 
-During loops the agent must emit Progress Beacons as user-visible
-chat/commentary updates after orientation, implementation slices, reviewer
-batches, repair decisions, meaningful verification, and final replay prep. This
-also applies to short loops when findings, fixes, or verification events occur.
-Evidence or `.agentic-loop` writes do not count as beacons. Each beacon
-summarizes what was found, what was fixed, what remains, and what will happen
-next without pausing the loop.
+During loops the agent must emit exactly one Progress Beacon per review cycle as
+a user-visible chat/commentary update after reviewer batches are deduplicated
+and before repair starts. Evidence or `.agentic-loop` writes do not count as
+beacons. Each beacon contains only severity counts, short problem classes, and
+what will be repaired or verified next.
 
 The loop keeps review cost bounded with compact reviewer context packets,
 adaptive P2 caps, delta-only re-review after repairs, role fusion for medium

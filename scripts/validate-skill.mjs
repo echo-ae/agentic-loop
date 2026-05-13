@@ -288,8 +288,14 @@ for (const [label, text] of [
   if (!normalized.includes("does not satisfy") && !normalized.includes("do not count as beacons")) {
     errors.push(`${label} must state that evidence/sidecar writes do not satisfy Progress Beacons.`);
   }
-  if (!normalized.includes("even in short loops") && !normalized.includes("also applies to short loops")) {
-    errors.push(`${label} must require Progress Beacons even in short loops when events occur.`);
+  if (!normalized.includes("exactly one") || !normalized.includes("per review cycle")) {
+    errors.push(`${label} must require exactly one Progress Beacon per review cycle.`);
+  }
+  if (!normalized.includes("severity counts") && !normalized.includes("finding counts by severity")) {
+    errors.push(`${label} must require severity counts in Progress Beacons.`);
+  }
+  if (!normalized.includes("problem classes")) {
+    errors.push(`${label} must require short problem classes in Progress Beacons.`);
   }
 }
 
@@ -303,11 +309,15 @@ for (const [label, text] of [
   ["reviewer prompts", reviewerPrompts],
   ["bootstrap script", bootstrapScript]
 ]) {
-  if (!text.includes("visible ephemeral workers")) {
+  const normalized = text.replace(/\s+/g, " ");
+  if (!normalized.includes("visible ephemeral workers")) {
     errors.push(`${label} must require visible ephemeral subagent lifecycle.`);
   }
-  if (!text.includes("status panel")) {
+  if (!normalized.includes("status panel")) {
     errors.push(`${label} must keep active subagents visible in the status panel.`);
+  }
+  if (!normalized.includes("chat-history items")) {
+    errors.push(`${label} must prevent child-agent threads from becoming chat-history items.`);
   }
 }
 for (const [label, text] of [
@@ -319,10 +329,11 @@ for (const [label, text] of [
   ],
   ["bootstrap script", bootstrapScript]
 ]) {
-  if (!text.includes("fork_context: false")) {
-    errors.push(`${label} must prefer fork_context: false for subagents.`);
+  const normalized = text.replace(/\s+/g, " ");
+  if (!normalized.includes("normal Codex App subagents")) {
+    errors.push(`${label} must use normal Codex App subagents for visible status.`);
   }
-  if (!text.includes("close_agent")) {
+  if (!normalized.includes("close_agent")) {
     errors.push(`${label} must require close_agent after subagent result integration.`);
   }
 }

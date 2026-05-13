@@ -748,36 +748,26 @@ replay and before stopping when available.
 ## 10. Progress Beacons
 
 Progress Beacons are mandatory user-visible chat/commentary updates during the
-loop. They are not approval gates, and they do not stop the work. Writing the
-same information only into the evidence file or \`.agentic-loop\` sidecars does
-not satisfy this requirement.
+loop, but they are intentionally sparse. Emit exactly one Progress Beacon per
+review cycle, after reviewer batches are deduplicated and before repair starts.
+Do not emit separate beacons after orientation, implementation, verification,
+or final replay. Writing the same information only into the evidence file or
+\`.agentic-loop\` sidecars does not satisfy this requirement.
 
-Emit a Progress Beacon:
-
-- after orientation and Impact Triage;
-- after an implementation slice is patched;
-- when reviewer batches finish, before repair starts;
-- after P0/P1 repair decisions are made;
-- after meaningful verification passes or failures;
-- before final adversarial plan replay;
-- when a live gate, credentialed check, or external service blocks progress.
-
-This applies even in short loops when any reviewer finding, repair decision,
-patch, verification result, or blocked gate occurs.
-
-Each beacon should briefly say what was found, what was fixed, what remains
-open or risky, and what will be repaired or verified next. Do not paste long
-logs, diffs, secrets, or raw credential values. Continue working unless the
-user explicitly asks to pause or redirect.
+Each beacon should contain only finding counts by severity, short problem
+classes, and what will be repaired or verified next. Include P0 when present.
+If a review cycle has no findings, emit one compact no-findings beacon. The
+only extra user-visible update outside this cadence is a hard blocker that
+requires user input, credentials, or approval.
 
 Default format:
 
 \`\`\`text
 Progress Beacon:
-- found:
-- fixed:
-- still open:
-- next:
+Review Cycle N:
+- findings: P0=0 P1=0 P2=0 P3=0
+- classes: short issue classes, or none
+- repair now: concrete fixes or verification next
 \`\`\`
 
 ## 11. Review Roles
@@ -957,10 +947,11 @@ When subagents are used:
 - keep implementation-scope ownership with the owning agent;
 - do not delegate the immediate critical-path blocker when the owning agent can
   fix it directly faster;
-- treat subagents as visible ephemeral workers, not durable project chats;
-- call \`spawn_agent\` with \`fork_context: false\` by default and pass only the
-  compact context packet; use \`fork_context: true\` only when the full current
-  thread is explicitly required and record that reason in evidence;
+- treat subagents as visible ephemeral workers, not durable project chats or
+  chat-history items;
+- spawn normal Codex App subagents so their names and active status are visible
+  in the status panel; pass the compact context packet and use full-thread
+  context only when explicitly required by the task;
 - keep each spawned child open while it is actively running so Codex App can
   show active subagent status in the status panel;
 - after \`wait_agent\` returns a result, call \`close_agent\` for that child
@@ -1164,10 +1155,12 @@ Replace or extend these draft bullets with project-specific rules:
   recorded as accepted risk with reason, residual risk, and follow-up owner or
   gate.
 - Use subagents only when the user explicitly authorizes delegation or parallel
-  agent work. Treat authorized subagents as visible ephemeral workers:
-  \`spawn_agent\` with \`fork_context: false\` by default, pass compact packet
-  context, keep them visible while running, collect the result, then call
-  \`close_agent\` after integration.
+  agent work. Treat authorized subagents as visible ephemeral workers: spawn
+  normal Codex App subagents so their names and active status are visible in the
+  status panel, pass compact packet context, keep them visible while running,
+  collect the result, then call \`close_agent\` after integration. Do not
+  create, promote, or preserve child-agent threads as durable chat-history
+  items.
 
 ## Token And State Controls
 
@@ -1185,13 +1178,12 @@ Replace or extend these draft bullets with project-specific rules:
 
 ## Progress Beacons
 
-Emit mandatory user-visible chat/commentary updates after orientation/triage,
-implementation slices, reviewer batches, repair decisions, meaningful
-verification, and before final replay. This applies even in short loops when
-findings, fixes, or verification events occur. Evidence or \`.agentic-loop\`
-writes do not satisfy the beacon. Say what was found, what was fixed, what
-remains, and what happens next. Continue working unless the user asks to pause
-or redirect.
+Emit exactly one mandatory user-visible chat/commentary update per review cycle,
+after reviewer findings are deduplicated and before repair starts. Evidence or
+\`.agentic-loop\` writes do not satisfy the beacon. Include only severity
+counts, short problem classes, and what will be repaired or verified next.
+Format: \`Review Cycle N: findings P0=0 P1=0 P2=0 P3=0; classes: ...; repair now: ...\`.
+Continue working unless the user asks to pause or redirect.
 
 ## Project Scripts
 

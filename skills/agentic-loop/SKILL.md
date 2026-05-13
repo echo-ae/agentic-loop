@@ -67,21 +67,21 @@ loop from an informal task description alone.
 - Use compact reviewer context packets, adaptive P2 caps, delta-only re-review,
   role fusion, and a finding ledger to reduce token and latency cost without
   weakening quality gates.
-- Emit mandatory Progress Beacons as user-visible chat/commentary updates:
-  after orientation or triage, after implementation slices, after reviewer
-  batches, before repair batches, after verification, and before final replay.
-  This applies even in short loops when findings, fixes, or verification events
-  occur. Writing evidence or `.agentic-loop` state does not satisfy the beacon.
-  Keep beacons short and continue working unless the user asks to pause.
+- Emit exactly one Progress Beacon per review cycle as a user-visible
+  chat/commentary update after reviewer batches are deduplicated and before
+  repair starts. Do not emit phase-by-phase beacons for orientation,
+  implementation, verification, or final replay. Writing evidence or
+  `.agentic-loop` state does not satisfy the beacon. Keep it short and continue
+  working unless the user asks to pause. Include only severity counts, short
+  problem classes, and what will be repaired or verified next.
 
 Progress Beacon template:
 
 ```text
-Progress Beacon:
-- found:
-- fixed:
-- still open:
-- next:
+Review Cycle N:
+- findings: P0=0 P1=0 P2=0 P3=0
+- classes: short issue classes, or none
+- repair now: concrete fixes or verification next
 ```
 - Maintain Loop State Artifacts for medium and larger work: Reviewer context
   packet, finding ledger, verification matrix, traceability matrix, and delta
@@ -105,12 +105,13 @@ Progress Beacon:
   it as an escaped finding and strengthen the runbook or plan if process failed.
 - Use subagents only when the user explicitly authorized delegation or parallel
   agent work, and only to the depth justified by Impact Triage.
-- Treat authorized subagents as visible ephemeral workers: spawn with
-  `fork_context: false` unless the task truly requires the full current thread,
-  keep each child open while it is actively running so Codex App can show it in
-  the status panel, collect the result, then call `close_agent` after findings
-  or patches are integrated; the loop cannot stop while any child agent remains
-  open.
+- Treat authorized subagents as visible ephemeral workers: spawn normal Codex
+  App subagents so their names and active status are visible in the status
+  panel, give each one a clear role/scope prompt, keep each child open while it
+  is running, collect the result, then call `close_agent` after findings or
+  patches are integrated. Do not create, promote, or preserve child-agent
+  threads as durable chat-history items; the loop cannot stop while any child
+  agent remains open.
 
 The reusable Implementation-First Contract reference lives in
 `references/loop-protocol.md`; ordinary project loops should use the generated
