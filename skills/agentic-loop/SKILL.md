@@ -1,9 +1,14 @@
 ---
 name: agentic-loop
-description: Use when an approved implementation plan needs repeated implement-review-repair-verify rounds, independent review roles, final plan replay, escaped-finding handling, or project-local runbook bootstrap.
+description: Use when the user explicitly invokes $agentic-loop, names the agentic-loop skill, or directly asks to run/bootstrap the agentic loop; do not use automatically for ordinary review, planning, or implementation requests.
 ---
 
 # Agentic Loop
+
+Activation is opt-in only. Use this skill only when the user explicitly invokes
+`$agentic-loop`, names the `agentic-loop` skill, or directly asks to run or
+bootstrap the agentic loop. Do not auto-start it for ordinary review,
+implementation, planning, or checklist requests.
 
 Use this skill to turn an approved no-variant spec, plan, and checklist into a
 bounded implementation loop with embedded review and evidence. This is not a

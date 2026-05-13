@@ -152,6 +152,11 @@ git rm --cached .agentic-loop/*.md
 
 ## Usage
 
+Activation is opt-in only. The skill should run only when the user explicitly
+invokes `$agentic-loop`, names the `agentic-loop` skill, or directly asks to run
+or bootstrap the agentic loop. It should not auto-start for ordinary review,
+planning, implementation, or checklist requests.
+
 When loop mode starts, the skill expects a root `AGENTIC_LOOP.md`. If it is
 missing, the agent should bootstrap it automatically before running the loop.
 When `ARCHITECTURE.md` or `docs/ARCHITECTURE.md` exists, bootstrap and context

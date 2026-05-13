@@ -61,6 +61,13 @@ if (!/^---\nname: agentic-loop\n/m.test(skillMd)) {
 if (!/^description: Use when /m.test(skillMd)) {
   errors.push('SKILL.md description should start with "Use when".');
 }
+const frontmatterDescription = skillMd.match(/^description: (.+)$/m)?.[1] ?? "";
+if (!frontmatterDescription.includes("$agentic-loop") || !frontmatterDescription.includes("explicitly")) {
+  errors.push("SKILL.md description must make activation explicit via $agentic-loop.");
+}
+if (!frontmatterDescription.includes("do not use automatically")) {
+  errors.push("SKILL.md description must forbid automatic activation.");
+}
 if (skillMd.length > 12000) {
   errors.push("SKILL.md is too large; move detail into references.");
 }
@@ -99,6 +106,7 @@ for (const phrase of [
   "Codex App with skills support",
   "install-windows.ps1",
   "PowerShell",
+  "Activation is opt-in only",
   ".agentic-loop/",
   "git rm --cached .agentic-loop/*.md"
 ]) {
