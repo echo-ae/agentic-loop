@@ -1,7 +1,8 @@
 # Reviewer Prompt Templates
 
-Use these prompts for read-only reviewer subagents or for labeled self-review
-passes when subagents are not authorized.
+Use these prompts for read-only reviewer subagents or for labeled fallback
+self-review passes when the subagent tool is unavailable, the user disables
+subagents, or Impact Triage records that spawning a child would be unsafe.
 
 When these prompts are sent to subagents, treat them as visible ephemeral workers:
 spawn normal Codex App subagents so their names and active status are visible in
@@ -12,8 +13,8 @@ chat-history items.
 
 ## Impact Triage Reviewer Prompt
 
-Use this only when scope is ambiguous or critical and the user authorized
-subagents.
+Use this when scope is ambiguous or critical enough to justify a triage
+subagent.
 
 ```text
 Review the approved plan/checklist and recommend review depth.
@@ -58,7 +59,7 @@ Scope:
 
 Return only findings that can change implementation, verification, checklist, or evidence quality.
 Use P0/P1/P2/P3 severity.
-This is an implementation-first loop with embedded review.
+This is an implementation-first loop with embedded subagent review.
 Use the supplied reviewer context packet first. Read additional files only when
 needed to validate a concrete finding or resolve a stated uncertainty.
 Validate completed implementation slices against the supplied plan; do not make

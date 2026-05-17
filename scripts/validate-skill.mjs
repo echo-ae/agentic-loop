@@ -82,6 +82,9 @@ if (!openaiYaml.includes("$agentic-loop")) {
 if (!openaiYaml.includes("checklist-driven implement")) {
   errors.push("agents/openai.yaml default_prompt must frame the loop as checklist-driven implementation.");
 }
+if (!openaiYaml.includes("subagent review")) {
+  errors.push("agents/openai.yaml default_prompt must mention subagent review.");
+}
 
 const skillFiles = await listFiles(skillDir).catch(() => []);
 for (const file of skillFiles) {
@@ -147,6 +150,11 @@ const validateLoopStateScript = await readFile(
   "utf8"
 ).catch(() => "");
 const reviewerPrompts = await readFile(path.join(skillDir, "references", "reviewer-prompts.md"), "utf8").catch(() => "");
+const loopProtocol = await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "");
+const projectRunbookTemplate = await readFile(
+  path.join(skillDir, "references", "project-runbook-template.md"),
+  "utf8"
+).catch(() => "");
 if (!bootstrapScript.includes('const DEFAULT_OUTPUT = "AGENTIC_LOOP.md";')) {
   errors.push("bootstrap script must default to root AGENTIC_LOOP.md.");
 }
@@ -158,6 +166,48 @@ if (!bootstrapScript.includes("--include-all-scripts") || !bootstrapScript.inclu
 }
 if (!bootstrapScript.includes("Architecture Orientation") || !bootstrapScript.includes("collectArchitectureOrientation")) {
   errors.push("bootstrap script must include Architecture Orientation extraction.");
+}
+for (const [label, text] of [
+  ["SKILL.md", skillMd],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
+  ["bootstrap script", bootstrapScript],
+  ["README.md", readme]
+]) {
+  const normalized = text.replace(/\s+/g, " ");
+  if (!normalized.includes("reviewer subagents")) {
+    errors.push(`${label} must make reviewer subagents part of loop mode.`);
+  }
+  if (!normalized.includes("at least 1 reviewer subagent") && !normalized.includes("at least one reviewer subagent")) {
+    errors.push(`${label} must require at least one reviewer subagent for small/docs-only loops.`);
+  }
+  if (!normalized.includes("2-3 reviewer subagents")) {
+    errors.push(`${label} must require 2-3 reviewer subagents for medium loops.`);
+  }
+  if (!normalized.includes("4-6 reviewer subagents")) {
+    errors.push(`${label} must require 4-6 reviewer subagents for large or high-risk loops.`);
+  }
+  if (!normalized.includes("Fallback to") && !normalized.includes("Fallback self-review")) {
+    errors.push(`${label} must define the explicit self-review fallback rule.`);
+  }
+}
+for (const [label, text] of [
+  ["SKILL.md", skillMd],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
+  ["bootstrap script", bootstrapScript],
+  ["README.md", readme]
+]) {
+  for (const stalePhrase of [
+    "no subagents; owning agent performs labeled self-review",
+    "Use subagents only when the user explicitly authorizes",
+    "Agents may only spawn subagents when the user explicitly asks",
+    "small work can use self-review"
+  ]) {
+    if (text.includes(stalePhrase)) {
+      errors.push(`${label} contains stale optional-subagent phrase: ${stalePhrase}`);
+    }
+  }
 }
 if (!draftContextPacketScript.includes("Reviewer Context Packet Draft")) {
   errors.push("draft context packet script must emit Reviewer Context Packet Draft.");
@@ -206,11 +256,8 @@ if (!validateLoopStateScript.includes("TRACEABILITY_STATUSES") || !validateLoopS
   errors.push("validate loop state script must validate statuses and linked artifact paths.");
 }
 for (const [label, text] of [
-  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
-  [
-    "project runbook template",
-    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
-  ],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
   ["reviewer prompts", await readFile(path.join(skillDir, "references", "reviewer-prompts.md"), "utf8").catch(() => "")],
   ["bootstrap script", bootstrapScript]
 ]) {
@@ -223,11 +270,8 @@ for (const [label, text] of [
 }
 
 for (const [label, text] of [
-  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
-  [
-    "project runbook template",
-    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
-  ],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
   ["bootstrap script", bootstrapScript]
 ]) {
   if (!text.includes("Token And Latency Efficiency Rules")) {
@@ -242,11 +286,8 @@ for (const [label, text] of [
 
 for (const [label, text] of [
   ["SKILL.md", skillMd],
-  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
-  [
-    "project runbook template",
-    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
-  ],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
   ["reviewer prompts", await readFile(path.join(skillDir, "references", "reviewer-prompts.md"), "utf8").catch(() => "")],
   ["bootstrap script", bootstrapScript]
 ]) {
@@ -263,11 +304,8 @@ for (const [label, text] of [
 
 for (const [label, text] of [
   ["SKILL.md", skillMd],
-  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
-  [
-    "project runbook template",
-    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
-  ],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
   ["bootstrap script", bootstrapScript],
   ["README.md", readme]
 ]) {
@@ -278,11 +316,8 @@ for (const [label, text] of [
 
 for (const [label, text] of [
   ["SKILL.md", skillMd],
-  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
-  [
-    "project runbook template",
-    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
-  ],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
   ["bootstrap script", bootstrapScript],
   ["README.md", readme]
 ]) {
@@ -309,11 +344,8 @@ for (const [label, text] of [
 
 for (const [label, text] of [
   ["SKILL.md", skillMd],
-  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
-  [
-    "project runbook template",
-    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
-  ],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
   ["reviewer prompts", reviewerPrompts],
   ["bootstrap script", bootstrapScript]
 ]) {
@@ -330,11 +362,8 @@ for (const [label, text] of [
 }
 for (const [label, text] of [
   ["SKILL.md", skillMd],
-  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
-  [
-    "project runbook template",
-    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
-  ],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
   ["bootstrap script", bootstrapScript]
 ]) {
   const normalized = text.replace(/\s+/g, " ");
@@ -348,11 +377,8 @@ for (const [label, text] of [
 
 for (const [label, text] of [
   ["SKILL.md", skillMd],
-  ["loop protocol", await readFile(path.join(skillDir, "references", "loop-protocol.md"), "utf8").catch(() => "")],
-  [
-    "project runbook template",
-    await readFile(path.join(skillDir, "references", "project-runbook-template.md"), "utf8").catch(() => "")
-  ],
+  ["loop protocol", loopProtocol],
+  ["project runbook template", projectRunbookTemplate],
   ["bootstrap script", bootstrapScript]
 ]) {
   for (const phrase of [

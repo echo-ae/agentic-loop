@@ -4,10 +4,11 @@ This is the reusable loop. Project-specific rules belong in the target
 repository's root `AGENTIC_LOOP.md`, `AGENTS.md`, architecture docs, and
 planning files.
 
-This is an implementation-first loop with embedded review, not a review-only
-workflow. When an approved spec, plan, and checklist are supplied, the owning
-agent must execute the next incomplete checklist slice before broad review,
-then use review rounds to find gaps, repair them, and verify the result.
+This is an implementation-first loop with embedded subagent review, not a
+review-only workflow. When an approved spec, plan, and checklist are supplied,
+the owning agent must execute the next incomplete checklist slice before broad
+review, then dispatch reviewer subagents to find gaps, repair them, and verify
+the result.
 
 ## When To Use This
 
@@ -38,8 +39,9 @@ brainstorming, or tasks where the user has not approved implementation yet.
 
 Before dispatching reviewers, the owning agent performs triage and records the
 decision in evidence. This is normally a self-triage by the owning agent, not a
-separate subagent. Use one dedicated triage reviewer only when scope is
-ambiguous or critical and the user authorized subagents.
+separate subagent. Because loop-mode `$agentic-loop` authorizes reviewer
+subagents by default, use a dedicated triage reviewer when scope is ambiguous or
+critical enough to justify it.
 
 Classify change size:
 
@@ -63,11 +65,18 @@ Record risk axes:
 
 Choose review depth from triage:
 
-- `small`: no subagents; owning agent performs labeled self-review.
-- `medium`: one reviewer focused on the dominant risk axis.
-- `large`: two or three reviewers with distinct roles.
-- `critical`: at least three distinct reviewers plus strict final replay; raise
-  max rounds only when the user authorizes a bounded extension.
+Loop-mode `$agentic-loop` is explicit authorization to dispatch reviewer
+subagents unless the user disables them in the same request.
+
+- `small`: at least 1 reviewer subagent after the first meaningful change.
+- `medium`: 2-3 reviewer subagents covering the highest-risk roles.
+- `large`: 4-6 reviewer subagents, batched if needed to keep ownership clear.
+- `critical`: 4-6 reviewer subagents plus strict final replay; batch reviewers
+  when risk axes are independent or context packets must stay small.
+
+Fallback to labeled self-review only when the subagent tool is unavailable, the
+user explicitly disables subagents, or Impact Triage records that spawning a
+child would be unsafe.
 
 Record:
 
@@ -399,13 +408,14 @@ Run the implementation loop with embedded review for:
 - EVIDENCE_FILE:
 
 Implement the plan, then review and repair until the stop criteria are met.
-Use subagents for independent review roles.
+Dispatch reviewer subagents according to Impact Triage.
 Fix all P0/P1 findings. Fix P2 findings unless they are explicitly recorded as accepted risk.
 Do not stop after the first pass.
 ```
 
-The phrase `Use subagents` is intentional. Agents may only spawn subagents when
-the user explicitly asks for delegation or parallel agent work.
+The phrase `Dispatch reviewer subagents` is intentional. In loop mode,
+`$agentic-loop` itself is the user's explicit authorization for reviewer
+subagents unless the same request disables them.
 
 ## Severity Rules
 
@@ -447,8 +457,10 @@ and identify gaps, but they do not own the implementation roadmap.
 ### Candidate Review Roles
 
 Select from these roles according to Impact Triage. Run selected roles with
-subagents only when the user authorizes delegation. Otherwise, perform selected
-roles sequentially as self-review and label them as such.
+visible reviewer subagents by default in loop mode. Perform selected roles
+sequentially as self-review only when the subagent tool is unavailable, the user
+explicitly disables subagents, or Impact Triage records that spawning a child
+would be unsafe.
 
 - **Architecture Reviewer**: spec drift, ownership boundaries, hidden fallbacks,
   silent degradation, legacy-direct paths, duplicated architecture, missing
@@ -752,7 +764,7 @@ immediately or temporarily change the checklist item to unchecked with a note.
 
 ## Subagent Dispatch Rules
 
-When subagents are used:
+For required reviewer subagent dispatch:
 
 - choose reviewer count and roles from Impact Triage instead of using a fixed
   number of agents;

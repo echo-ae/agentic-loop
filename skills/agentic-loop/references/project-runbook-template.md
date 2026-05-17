@@ -4,7 +4,7 @@ Status: Draft
 
 Purpose: define the project-specific workflow for turning an approved spec,
 plan, and checklist into shipped, verified work. This is an implementation-first
-loop with embedded review, not a review-only workflow.
+loop with embedded subagent review, not a review-only workflow.
 
 This file extends the global `$agentic-loop` skill. It does not replace
 feature specs, implementation plans, checklists, evidence files, architecture
@@ -115,14 +115,21 @@ Risk axes:
 
 Review depth:
 
-- `small`: no subagents; owning agent performs labeled self-review.
-- `medium`: one reviewer focused on the dominant risk axis.
-- `large`: two or three reviewers with distinct roles.
-- `critical`: at least three distinct reviewers plus strict final replay; raise
-  max rounds only when the user authorizes a bounded extension.
+Loop-mode `$agentic-loop` is explicit authorization to dispatch reviewer
+subagents unless the user disables them in the same request.
+
+- `small`: at least 1 reviewer subagent after the first meaningful change.
+- `medium`: 2-3 reviewer subagents covering the highest-risk roles.
+- `large`: 4-6 reviewer subagents, batched if needed to keep ownership clear.
+- `critical`: 4-6 reviewer subagents plus strict final replay; batch reviewers
+  when risk axes are independent or context packets must stay small.
+
+Fallback to labeled self-review only when the subagent tool is unavailable, the
+user explicitly disables subagents, or Impact Triage records that spawning a
+child would be unsafe.
 
 Evidence must record size, risk axes, selected reviewer roles, omitted reviewer
-roles, max rounds, and rationale.
+roles, fallback reason when applicable, max rounds, and rationale.
 
 ## 9. Token And Latency Efficiency Rules
 
@@ -457,7 +464,11 @@ after finding a gap.
 
 ## 16. Subagent Dispatch Rules
 
-When subagents are used:
+Loop-mode `$agentic-loop` requires subagents by default. Dispatch reviewer
+subagents according to Impact Triage unless the user disables subagents or the
+subagent tool is unavailable. Record any fallback to self-review in evidence.
+
+When dispatching subagents:
 
 - choose reviewer count and roles from Impact Triage instead of using a fixed
   number of agents;

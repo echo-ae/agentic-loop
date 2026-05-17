@@ -11,12 +11,13 @@ bootstrap the agentic loop. Do not auto-start it for ordinary review,
 implementation, planning, or checklist requests.
 
 Use this skill to turn an approved no-variant spec, plan, and checklist into a
-bounded implementation loop with embedded review and evidence. This is not a
-review-only workflow: when plan artifacts are supplied, the owning agent starts
-by executing the next incomplete checklist slice, then uses reviewers to find
-gaps and repairs. The global skill is project-agnostic; the target repository
-should keep its own root `AGENTIC_LOOP.md` runbook for local architecture rules,
-commands, live gates, and accepted-risk policy.
+bounded implementation loop with embedded subagent review and evidence. This is
+not a review-only workflow: when plan artifacts are supplied, the owning agent
+starts by executing the next incomplete checklist slice, then dispatches
+subagent reviewers to find gaps and repairs. The global skill is
+project-agnostic; the target repository should keep its own root
+`AGENTIC_LOOP.md` runbook for local architecture rules, commands, live gates,
+and accepted-risk policy.
 
 ## Decide The Mode
 
@@ -33,7 +34,8 @@ commands, live gates, and accepted-risk policy.
   bootstrap it automatically before continuing. Do not search or create
   alternate runbook paths.
 - **Reviewer mode**: user asks for an independent review role. Read
-  `references/reviewer-prompts.md` and return findings only.
+  `references/reviewer-prompts.md`, dispatch at least one reviewer subagent
+  when the subagent tool is available, and return findings only.
 
 ## Required Inputs For Loop Mode
 
@@ -108,15 +110,31 @@ Review Cycle N:
 - Run a final adversarial plan replay before stopping.
 - If a later prompt finds a P0/P1/P2 after the loop previously stopped, record
   it as an escaped finding and strengthen the runbook or plan if process failed.
-- Use subagents only when the user explicitly authorized delegation or parallel
-  agent work, and only to the depth justified by Impact Triage.
-- Treat authorized subagents as visible ephemeral workers: spawn normal Codex
-  App subagents so their names and active status are visible in the status
-  panel, give each one a clear role/scope prompt, keep each child open while it
-  is running, collect the result, then call `close_agent` after findings or
+- Loop-mode `$agentic-loop` requires visible Codex App subagent reviewers.
+  Treat the user's explicit invocation of `$agentic-loop` for an
+  implementation loop as authorization to spawn reviewer subagents unless the
+  user disables subagents in the same request.
+- Run Impact Triage before reviewer dispatch and choose reviewer count and
+  roles from size/risk instead of using a fixed number:
+  - small/docs-only loop: at least 1 reviewer subagent after the first
+    meaningful change;
+  - medium loop: 2-3 reviewer subagents covering the highest-risk roles;
+  - large or high-risk loop: 4-6 reviewer subagents, batched if needed to keep
+    ownership clear;
+  - reviewer-only mode: at least 1 independent reviewer subagent unless the
+    user asks for lead-agent-only review.
+- Treat subagents as visible ephemeral workers: spawn normal Codex App
+  subagents so their names and active status are visible in the status panel,
+  give each one a clear role/scope prompt, keep each child open while it is
+  running, collect the result, then call `close_agent` after findings or
   patches are integrated. Do not create, promote, or preserve child-agent
   threads as durable chat-history items; the loop cannot stop while any child
   agent remains open.
+- Fallback to lead-agent self-review only when the subagent tool is unavailable,
+  the user explicitly disables subagents, or Impact Triage records that
+  spawning a child would be unsafe for the current environment. Record the
+  fallback reason in the finding ledger or evidence file and label the pass as
+  self-review, not independent review.
 
 The reusable Implementation-First Contract reference lives in
 `references/loop-protocol.md`; ordinary project loops should use the generated

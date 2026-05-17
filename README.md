@@ -4,7 +4,7 @@ A portable Codex App skill for running approved plans as implementation-first
 bounded loops:
 
 1. implement from an approved spec, plan, and checklist;
-2. review with independent roles;
+2. review with independent subagent roles;
 3. repair all P0/P1 findings and unresolved P2 findings;
 4. verify with evidence;
 5. replay the plan point by point before stopping.
@@ -178,7 +178,7 @@ $agentic-loop run the implementation loop for:
 - PLAN_FILE: docs/124-feature-implementation-plan.md
 - CHECKLIST_FILE: docs/125-feature-checklist.md
 - EVIDENCE_FILE: docs/126-feature-evidence.md
-Use subagents for independent review.
+Dispatch reviewer subagents according to Impact Triage.
 Fix all P0/P1. Fix P2 or record accepted risk.
 ```
 
@@ -188,11 +188,12 @@ checklist slice before broad review. Reviewers validate completed slices and
 surface plan gaps; they do not become the owners of implementation scope.
 
 Loop mode performs Impact Triage first, then picks review depth from risk:
-small work can use self-review, medium work usually gets one reviewer, large
-work gets two or three, and critical work gets stricter review plus bounded
-round limits.
+small work gets at least one reviewer subagent after the first meaningful
+change, medium work gets 2-3 reviewer subagents, and large or high-risk work
+gets 4-6 reviewer subagents, batched when ownership or context size requires
+it.
 
-Authorized subagents are treated as visible ephemeral workers: the owning agent
+Reviewer subagents are treated as visible ephemeral workers: the owning agent
 should spawn normal Codex App subagents so their names and active status remain
 visible in the status panel, keep them open while they are actively running,
 collect their result, then close them with `close_agent` after integration. The
@@ -202,6 +203,10 @@ chat-history items.
 Reviewers batch findings within their assigned scope: all P0/P1, P2 up to the
 adaptive cap from Impact Triage, no P3 unless requested, and no stopping after
 the first issue.
+
+Fallback to self-review is allowed only when the subagent tool is unavailable,
+the user disables subagents, or Impact Triage records that spawning a child
+would be unsafe.
 
 During loops the agent must emit exactly one Progress Beacon per review cycle as
 a user-visible chat/commentary update after reviewer batches are deduplicated
