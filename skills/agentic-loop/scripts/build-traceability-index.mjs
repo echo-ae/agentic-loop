@@ -6,6 +6,7 @@ import process from "node:process";
 
 function parseArgs(argv) {
   const args = {
+    spec: [],
     plan: [],
     checklist: [],
     existing: undefined,
@@ -17,7 +18,9 @@ function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--plan") {
+    if (arg === "--spec") {
+      args.spec.push(argv[++index]);
+    } else if (arg === "--plan") {
       args.plan.push(argv[++index]);
     } else if (arg === "--checklist") {
       args.checklist.push(argv[++index]);
@@ -102,7 +105,7 @@ function extractItems(text, sourcePath, preferredKind, options) {
         sourcePath,
         text: checkbox[1]
       });
-    } else if (preferredKind === "plan" && numbered) {
+    } else if ((preferredKind === "plan" || preferredKind === "spec") && numbered) {
       items.push({
         kind: "numbered",
         line: index + 1,
@@ -174,7 +177,7 @@ function parseExistingRows(text) {
     if (id === "id" || /^-+$/.test(id)) {
       continue;
     }
-    if (!/^(PLAN|CHK)-\d{3,}$/.test(id)) {
+    if (!/^(SPEC|PLAN|CHK)-\d{3,}$/.test(id)) {
       continue;
     }
     rows.push({
@@ -309,27 +312,29 @@ ${renderRows(rows)}`;
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (args.help || (args.plan.length === 0 && args.checklist.length === 0)) {
+  if (args.help || (args.spec.length === 0 && args.plan.length === 0 && args.checklist.length === 0)) {
     console.log(
-      "Usage: build-traceability-index.mjs --plan PLAN.md --checklist CHECKLIST.md [--existing .agentic-loop/traceability.md] [--changed-only] [--include-headings] [--section TEXT] [--ids PLAN-001,CHK-002] [--status TODO,gap_found]"
+      "Usage: build-traceability-index.mjs --spec SPEC.md --plan PLAN.md --checklist CHECKLIST.md [--existing .agentic-loop/traceability.md] [--changed-only] [--include-headings] [--section TEXT] [--ids SPEC-001,PLAN-001,CHK-002] [--status TODO,gap_found]"
     );
     return;
   }
 
-  const [planItems, checklistItems, existingRows] = await Promise.all([
+  const [specItems, planItems, checklistItems, existingRows] = await Promise.all([
+    readItems(args.spec, "spec", args),
     readItems(args.plan, "plan", args),
     readItems(args.checklist, "checklist", args),
     readExistingRows(args.existing)
   ]);
 
+  const spec = buildRows("SPEC", specItems, existingRows);
   const plan = buildRows("PLAN", planItems, existingRows);
   const checklist = buildRows("CHK", checklistItems, existingRows);
   const filters = {
     ids: args.ids,
     statuses: args.statuses
   };
-  const currentRows = filterRows([...plan.currentRows, ...checklist.currentRows], filters);
-  const removedRows = filterRows([...plan.removedRows, ...checklist.removedRows], filters);
+  const currentRows = filterRows([...spec.currentRows, ...plan.currentRows, ...checklist.currentRows], filters);
+  const removedRows = filterRows([...spec.removedRows, ...plan.removedRows, ...checklist.removedRows], filters);
   const changedRows = currentRows.filter((row) => row.isNew);
 
   if (args.changedOnly) {
@@ -355,7 +360,8 @@ ${renderRemovedRows(removedRows)}
 
 Draft statuses use \`TODO\`; replace them with \`implemented_and_verified\`,
 \`implemented_fail_closed\`, \`blocked_live_or_external_gate\`,
-\`accepted_risk\`, or \`gap_found\` as evidence accumulates.
+\`accepted_risk\`, \`not_in_scope_with_reason\`, or \`gap_found\` as evidence
+accumulates.
 
 Existing IDs are reused by item hash when \`--existing\` is supplied. New IDs are
 assigned after the highest existing ID for each prefix to avoid row churn.
@@ -365,7 +371,7 @@ ${renderMatrix(currentRows)}
 ## Removed Rows From Existing Matrix
 
 These rows existed in the previous matrix but were not found in the current
-plan/checklist inputs. Keep them in evidence only if they still explain an
+spec/plan/checklist inputs. Keep them in evidence only if they still explain an
 accepted risk or historical gate.
 
 | id | item hash | item excerpt | previous source |

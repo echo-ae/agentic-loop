@@ -5,35 +5,71 @@ repository's root `AGENTIC_LOOP.md`, `AGENTS.md`, architecture docs, and
 planning files.
 
 This is an implementation-first loop with embedded subagent review, not a
-review-only workflow. When an approved spec, plan, and checklist are supplied,
-the owning agent must execute the next incomplete checklist slice before broad
-review, then dispatch reviewer subagents to find gaps, repair them, and verify
-the result.
+review-only workflow. Unless the user explicitly asks for review-only output,
+the owning agent first establishes a saved no-variant spec, implementation
+plan, and checklist, then executes the next incomplete checklist slice before
+broad review, dispatches reviewer subagents to find gaps, repairs them, and
+verifies the result.
 
 ## When To Use This
 
-Use this loop only when all are true:
+Use this loop when any of these are true:
 
-- there is an approved no-variant spec, implementation plan, and checklist;
+- the user explicitly invokes `$agentic-loop` for implementation;
+- the user supplies an approved no-variant spec, implementation plan, and
+  checklist;
+- the user supplies a checklist or informal goal and expects implementation,
+  not review-only output;
 - the task is large enough that one implementation pass is unlikely to be
-  enough;
-- the user wants multiple review and repair passes without a new prompt after
-  each pass;
-- the work can be bounded by explicit stop criteria.
+  enough, or the user wants multiple review and repair passes.
 
 Do not use this loop for tiny one-file fixes, quick answers, exploratory
 brainstorming, or tasks where the user has not approved implementation yet.
 
-## Required Inputs
+## Planning Artifact Contract
 
-- `SPEC_FILE`: approved no-variant spec.
-- `PLAN_FILE`: approved implementation plan.
+- `SPEC_FILE`: approved or auto-authored no-variant spec.
+- `PLAN_FILE`: approved or auto-authored implementation plan.
 - `CHECKLIST_FILE`: execution checklist.
-- `EVIDENCE_FILE`: evidence or audit log, if present.
+- `EVIDENCE_FILE`: evidence or audit log, if present or created.
 - `TARGET_SCOPE`: exact files, packages, apps, routes, workflows, or tests.
 - `FORBIDDEN_SCOPE`: files or behavior not to change.
 - `LIVE_GATES`: external services, credentials, manual approvals, or opt-in
   checks that cannot be silently run.
+
+Artifact source rules:
+
+- Explicit spec/plan/checklist supplied by the user wins.
+- Checklist-only input must be expanded by resolving linked artifacts or
+  authoring the missing spec and plan.
+- Informal goals in loop mode must be converted into saved no-variant spec,
+  implementation plan, and checklist files before product code changes.
+- Generated artifacts must follow the current project's accepted markdown
+  naming, structure, and location conventions.
+
+### Artifact Completeness Gate
+
+Before product code changes, prove that the spec, plan, and checklist are
+implementable without guessing.
+
+The gate passes only when:
+
+- the no-variant spec states scope, non-goals, invariants, target behavior,
+  failure behavior, acceptance criteria, and verification gates;
+- the implementation plan maps spec requirements to ordered implementation
+  slices, owned surfaces, expected contract/data-flow changes, docs updates,
+  and verification;
+- the checklist contains concrete checkbox items with target files/modules,
+  expected observable outcome, and exact verification command, gate, assertion,
+  or evidence;
+- no item relies on vague verbs such as "support", "update", "handle", or
+  "improve" unless the object, behavior, surface, and proof are explicit;
+- ambiguous, conflicting, placeholder, or unowned items are rewritten before
+  implementation.
+
+Run `node "$CODEX_HOME/skills/agentic-loop/scripts/validate-planning-artifacts.mjs" --spec SPEC_FILE --plan PLAN_FILE --checklist CHECKLIST_FILE`
+when available. Treat failures as P1 artifact findings and revise the
+artifacts before implementation.
 
 ## Impact Triage
 
@@ -109,25 +145,26 @@ context packet:
 - current evidence summary, commands already run, and known failures;
 - finding ledger with open, fixed, duplicate, accepted-risk, and blocked items.
 
-Use adaptive P2 caps from Impact Triage:
+Use exhaustive material finding collection:
 
-- `small`: all P0/P1, top 0-2 P2;
-- `medium`: all P0/P1, top 3 P2;
-- `large`: all P0/P1, top 5 P2;
-- `critical`: all P0/P1, top 7 P2.
+- reviewers return every P0/P1/P2 finding found within the assigned scope;
+- P3 is omitted unless the user explicitly requested polish;
+- reviewers do not stop after the first issue;
+- loop mode does not use P2 caps.
 
 Use role fusion when it preserves coverage: for `medium` scope, prefer a single
 combined reviewer such as `Contract+Test`, `Runtime+Evidence`, or
 `Architecture+Evidence` when the risk axes are adjacent.
 
-After repair, prefer delta-only re-review:
+After repair, use delta review only as an intermediate accelerator:
 
 - send reviewers the fix diff, open finding ledger, changed surfaces, and
   relevant evidence updates;
 - do not re-send unchanged plan/spec/checklist content unless the previous
   finding touched that contract;
-- run a full re-review only when repairs changed architecture, runtime,
-  contracts, persistence, E2E boundaries, or final replay found a gap.
+- final acceptance still requires full spec/plan/checklist replay against the
+  implementation, traceability matrix, verification matrix, finding ledger, and
+  evidence.
 
 The owning agent owns deduplication through the finding ledger. Reviewers should
 return overlapping findings when they have independent evidence; the owning
@@ -190,19 +227,19 @@ change materially.
 
 Use stable IDs instead of repeating long prose:
 
+- spec requirements: `SPEC-001`, `SPEC-002`, ...
 - plan items: `PLAN-001`, `PLAN-002`, ...
 - checklist items: `CHK-001`, `CHK-002`, ...
 - verification gates: `GATE-001`, `GATE-002`, ...
 - findings: `FIND-001`, `FIND-002`, ...
 
-When practical, record a short content hash for every plan/checklist item in the
-traceability matrix. If the hash and verification refs are unchanged, later
-rounds may use the matrix plus targeted spot-checks instead of rereading the
-full item text.
-Use `scripts/build-traceability-index.mjs --plan PLAN_FILE --checklist
-CHECKLIST_FILE --existing .agentic-loop/traceability.md` when creating or
-refreshing item IDs and hashes. Reuse existing IDs by hash before assigning new
-ones so plan insertions do not force later rows to churn.
+When practical, record a short content hash for every spec, plan, and checklist
+item in the traceability matrix. Hashes may help detect drift, but they do not
+replace the final full replay.
+Use `scripts/build-traceability-index.mjs --spec SPEC_FILE --plan PLAN_FILE
+--checklist CHECKLIST_FILE --existing .agentic-loop/traceability.md` when
+creating or refreshing item IDs and hashes. Reuse existing IDs by hash before
+assigning new ones so plan insertions do not force later rows to churn.
 Headings are not indexed by default; pass `--include-headings` only when
 headings are actionable plan/checklist items.
 For large plans, use `--section`, `--ids`, and `--status` to emit only the
@@ -236,26 +273,26 @@ plan; browser flow changes require targeted UI or Playwright proof.
 
 #### Traceability Matrix
 
-Track plan execution explicitly so final replay can verify a compact table
-before spot-checking code and evidence.
+Track spec, plan, and checklist execution explicitly so final replay can verify
+the full table against code and evidence.
 
 ```markdown
-| id | item hash | implementation refs | verification refs | evidence refs | status |
-| --- | --- | --- | --- | --- | --- |
+| spec id | plan id | checklist id | item hash | implementation refs | verification refs | evidence refs | status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 ```
 
 Allowed statuses: `implemented_and_verified`, `implemented_fail_closed`,
-`blocked_live_or_external_gate`, `accepted_risk`, `gap_found`.
+`blocked_live_or_external_gate`, `accepted_risk`, `not_in_scope_with_reason`,
+`gap_found`.
 
-Final replay should read all `gap_found`, `accepted_risk`,
-`blocked_live_or_external_gate`, changed-hash, new, and open-finding rows. For
-unchanged verified rows, use a deterministic spot check from the item hash
-instead of rereading the whole plan every round.
+Final replay must read the original spec, plan, checklist, all traceability
+rows, every open or recently fixed finding, every blocked or accepted-risk row,
+the verification matrix, and evidence.
 
 #### Delta Review Packet
 
-After repairs, send reviewers a delta packet unless a full re-review trigger is
-hit.
+After repairs, a delta packet may accelerate intermediate re-review. It is not
+final acceptance evidence.
 
 ```markdown
 Delta review packet:
@@ -279,7 +316,9 @@ evidence history.
 
 - active slice:
 - runtime protocol:
-- plan/checklist ids changed:
+- artifact source:
+- spec/plan/checklist ids changed:
+- artifact completeness gate status:
 - open findings:
 - accepted risks:
 - verification matrix status:
@@ -379,12 +418,13 @@ If a noncanonical legacy runbook exists, use it only as migration input for the
 root `AGENTIC_LOOP.md`.
 
 If required planning artifacts are missing, create or update them before
-starting the loop.
+implementation, then start the loop immediately unless the user asked only to
+draft planning documents.
 
 ## Implementation-First Contract
 
-When `SPEC_FILE`, `PLAN_FILE`, and `CHECKLIST_FILE` are supplied, the loop
-starts from execution, not review.
+Once `SPEC_FILE`, `PLAN_FILE`, and `CHECKLIST_FILE` exist, the loop starts from
+execution, not review.
 
 Required behavior:
 
@@ -393,8 +433,8 @@ Required behavior:
 - review rounds validate and repair completed implementation slices; they do
   not replace checklist-driven execution;
 - reviewers must not become the primary drivers of implementation scope;
-- new work discovered by reviewers must map back to the supplied spec, plan, or
-  checklist, or be recorded as an explicit plan gap before implementation;
+- new work discovered by reviewers must map back to the spec, plan, or
+  checklist, or be recorded as an explicit artifact gap before implementation;
 - the loop cannot stop because review is clean if checklist items remain
   unimplemented, unverified, unblocked, or unaccepted as risk.
 
@@ -465,6 +505,9 @@ would be unsafe.
 - **Architecture Reviewer**: spec drift, ownership boundaries, hidden fallbacks,
   silent degradation, legacy-direct paths, duplicated architecture, missing
   architecture docs.
+- **Artifact Completeness Reviewer**: spec, plan, and checklist are detailed
+  enough to implement without guessing; every material item has scope, owned
+  surface, observable behavior, acceptance criteria, and verification proof.
 - **Runtime Reviewer**: workflow determinism, task queues, workers, retries,
   cancellation, idempotency, side-effect ordering, synthetic-success paths.
 - **Contract And Boundary Reviewer**: validation, unsafe casts, public contract
@@ -490,13 +533,16 @@ would be unsafe.
 2. Read `AGENTIC_LOOP.md`, its Architecture Orientation, the current evidence state, and the plan/checklist
    rows needed for the active slice. Read full spec/plan/checklist text only
    when matrix rows or excerpts are missing, changed, risky, or ambiguous.
-3. Run Impact Triage and choose review depth, reviewer roles, and max rounds.
-4. Build the reviewer context packet and initialize or update the finding
+3. Resolve or create `SPEC_FILE`, `PLAN_FILE`, and `CHECKLIST_FILE`.
+4. Run the Artifact Completeness Gate. If it fails, revise the artifacts before
+   product code changes.
+5. Run Impact Triage and choose review depth, reviewer roles, and max rounds.
+6. Build the reviewer context packet and initialize or update the finding
    ledger, verification matrix, and traceability matrix.
-5. Run `git status --short`.
-6. Identify unrelated dirty worktree changes.
-7. Build a local round plan from the checklist.
-8. Do not emit a Progress Beacon during orientation; record scope, architecture
+7. Run `git status --short`.
+8. Identify unrelated dirty worktree changes.
+9. Build a local round plan from the checklist.
+10. Do not emit a Progress Beacon during orientation; record scope, architecture
    owner map, selected reviewer roles, and immediate implementation slice in
    evidence or `.agentic-loop` state.
 
@@ -539,8 +585,7 @@ issue.
 
 Rules:
 
-- return every P0/P1 finding found within the assigned scope;
-- return P2 findings up to the adaptive cap set by Impact Triage;
+- return every P0/P1/P2 finding found within the assigned scope;
 - omit P3 unless the user explicitly requested polish;
 - do not stop after the first finding;
 - if several findings have the same root cause, group them into one finding
@@ -549,8 +594,7 @@ Rules:
   reviewer has independent evidence or a role-specific angle;
 - deduplication happens in the owning agent after all reviewer batches are
   collected, not inside individual reviewers;
-- end with `No more material findings within scope` or
-  `Stopped at finding cap`.
+- end with `No more material findings within scope`.
 
 ### Round 3: Repair Pass
 
@@ -580,7 +624,7 @@ Live gates remain opt-in unless the user explicitly authorizes them.
 Do not emit a Progress Beacon after verification. Record command results,
 blocked live gates, and broader verification needs in evidence or sidecars.
 
-### Round 5: Final Adversarial Plan Replay
+### Round 5: Final Adversarial Spec/Plan/Checklist Replay
 
 Replay the user's manual audit prompt:
 
@@ -588,10 +632,9 @@ Replay the user's manual audit prompt:
 Take the plan and go point by point. For each point, analyze how well it is implemented, find gaps, and fix them immediately.
 ```
 
-Use the traceability matrix first. Read full plan/checklist text only for rows
-that are changed, new, missing implementation refs, missing verification refs,
-gap-found, blocked, accepted-risk, linked to open findings, or selected by the
-deterministic hash spot-check.
+Read the original spec, plan, checklist, traceability matrix, verification
+matrix, finding ledger, and evidence. Hashes may help detect drift, but they do
+not replace full replay.
 
 For every replayed row, classify it as:
 
@@ -599,6 +642,7 @@ For every replayed row, classify it as:
 - `implemented_fail_closed`;
 - `blocked_live_or_external_gate`;
 - `accepted_risk`;
+- `not_in_scope_with_reason`;
 - `gap_found`.
 
 For every documented command, environment variable, URL, port, feature flag, or
@@ -609,8 +653,15 @@ Fix every `gap_found` item immediately unless it is a live/external gate that
 cannot be run silently. If replay fixes any P0/P1/P2, append evidence and run at
 least one additional review round.
 
-The loop may only stop after a clean final plan replay and one subsequent clean
-review round.
+### Round 6: Red-Team Evidence Audit
+
+Try to disprove completion before stopping. Look for stale checked items,
+skipped gates, hidden fallbacks, undocumented deviations, claims without
+commands, accepted risks without required detail, and untraced
+spec/plan/checklist rows.
+
+The loop may only stop after a clean final replay, a clean red-team evidence
+audit, and one subsequent clean review round.
 
 Do not emit a Progress Beacon before final replay. If final replay finds gaps,
 record them as findings and include them in the next review-cycle beacon.
@@ -621,11 +672,13 @@ Start another review round when any are true:
 
 - a P0/P1 finding was fixed in the previous round;
 - a P2 finding was fixed and the affected area has not been re-reviewed;
+- a spec, plan, or checklist artifact was created or materially changed;
 - checklist items changed from unchecked to checked;
 - evidence was materially updated;
 - verification exposed a new failure;
 - implementation touched architecture, runtime, contract, or E2E boundaries;
 - final plan replay found any gap;
+- red-team evidence audit found any gap;
 - a documented command, environment flag, URL, port, or mode was corrected.
 - the finding ledger changed status for any P0/P1/P2 item.
 
@@ -633,18 +686,24 @@ Start another review round when any are true:
 
 Stop only when all are true:
 
-- every checklist item in scope is checked, blocked, or accepted as risk;
-- every implemented slice traces back to the supplied spec, plan, or checklist;
+- every spec requirement, plan item, and checklist item in scope is
+  implemented and verified, fail-closed, blocked by a live/external gate,
+  accepted as risk, or explicitly out of scope with reason;
+- artifact completeness gate passed before product code changes, or the
+  remaining blocker is explicitly recorded and no product code changes were
+  made beyond planning artifacts;
+- every implemented slice traces back to the spec, plan, and checklist;
 - no open P0/P1 findings;
 - all P2 findings fixed or recorded as accepted risk;
 - relevant tests, typecheck, lint, format, and diff checks pass or are
   explicitly blocked;
 - evidence records verification commands and outcomes;
 - evidence records the Impact Triage decision and selected review depth;
-- evidence records token/latency controls: context packet, adaptive P2 cap,
-  re-review mode, and finding ledger status;
+- evidence records context packet, finding ledger status, verification matrix,
+  and traceability matrix;
 - live gates are passed or explicitly left open as opt-in gates;
-- final adversarial plan replay is recorded and clean;
+- full final adversarial spec/plan/checklist replay is recorded and clean;
+- red-team evidence audit is recorded and clean;
 - documented commands, flags, URLs, ports, and modes are implemented, verified,
   blocked, or accepted as risk;
 - final answer reports accepted-risk P2 findings and escaped findings.
@@ -663,7 +722,9 @@ user can explicitly authorize another bounded block of rounds.
 
 - active slice:
 - runtime protocol:
-- plan/checklist ids changed:
+- artifact source:
+- spec/plan/checklist ids changed:
+- artifact completeness gate status:
 - open findings:
 - accepted risks:
 - verification matrix status:
@@ -676,6 +737,15 @@ Scope:
 - SPEC_FILE:
 - PLAN_FILE:
 - CHECKLIST_FILE:
+- EVIDENCE_FILE:
+
+Planning artifact status:
+- source: user-supplied | checklist-expanded | auto-authored
+- no-variant spec:
+- implementation plan:
+- checklist:
+- artifact completeness gate:
+- traceability coverage:
 
 Impact triage:
 - size:
@@ -684,11 +754,11 @@ Impact triage:
 - omitted reviewer roles:
 - max rounds:
 
-Token and latency controls:
+Context and state controls:
 - context packet:
-- adaptive P2 cap:
-- re-review mode: full | delta
 - finding ledger:
+- delta review packets:
+- final replay mode: full spec/plan/checklist replay
 
 Implementation progress:
 - checklist slice executed:
@@ -711,17 +781,19 @@ Read and output budget:
 Review roles run (selected roles only; omitted roles must be explained in
 Impact triage):
 - Architecture reviewer:
+- Artifact completeness reviewer:
 - Runtime reviewer:
 - Contract and boundary reviewer:
 - Test and E2E reviewer:
 - Evidence reviewer:
 - Final plan replay reviewer:
+- Red-team evidence auditor:
 
 Reviewer batch status:
-- cap:
-- status: no more material findings | stopped at finding cap
+- status: no more material findings within scope
 
 Findings:
+- P0:
 - P1:
 - P2:
 
@@ -740,6 +812,9 @@ Documented command and environment contract:
 - blocked:
 
 Final plan replay:
+- clean | gaps fixed | gaps blocked
+
+Red-team evidence audit:
 - clean | gaps fixed | gaps blocked
 
 Escaped findings from prior loop:
@@ -772,8 +847,8 @@ For required reviewer subagent dispatch:
   or full planning corpus when a narrow packet is enough;
 - use role fusion for `medium` scope when one combined reviewer can cover the
   selected risk axes without losing coverage;
-- use delta-only re-review after repairs unless the changed surface requires a
-  full re-review;
+- use delta review only as an intermediate repair accelerator; final acceptance
+  always requires full spec/plan/checklist replay;
 - give each subagent exact files, scope, forbidden scope, and governing
   invariants;
 - do not ask two agents to edit the same files at the same time unless write

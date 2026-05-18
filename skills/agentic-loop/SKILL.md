@@ -10,14 +10,14 @@ Activation is opt-in only. Use this skill only when the user explicitly invokes
 bootstrap the agentic loop. Do not auto-start it for ordinary review,
 implementation, planning, or checklist requests.
 
-Use this skill to turn an approved no-variant spec, plan, and checklist into a
-bounded implementation loop with embedded subagent review and evidence. This is
-not a review-only workflow: when plan artifacts are supplied, the owning agent
-starts by executing the next incomplete checklist slice, then dispatches
-subagent reviewers to find gaps and repairs. The global skill is
-project-agnostic; the target repository should keep its own root
-`AGENTIC_LOOP.md` runbook for local architecture rules, commands, live gates,
-and accepted-risk policy.
+Use this skill to turn a user goal into a shipped, verified implementation by
+first establishing a no-variant spec, implementation plan, and checklist, then
+running an exhaustive implementation/review/repair loop against those artifacts.
+This is not a review-only workflow and not a delta-only convenience pass. The
+owning agent must close the full spec/plan/checklist traceability matrix before
+stopping. The global skill is project-agnostic; the target repository should
+keep its own root `AGENTIC_LOOP.md` runbook for local architecture rules,
+commands, live gates, evidence paths, and accepted-risk policy.
 
 ## Decide The Mode
 
@@ -25,7 +25,8 @@ and accepted-risk policy.
   runbook. Read `references/bootstrap-guide.md`, run the bootstrap script if
   useful, then refine the generated runbook after inspecting the project. When
   `ARCHITECTURE.md` or `docs/ARCHITECTURE.md` exists, use it as the primary
-  architecture orientation source.
+  architecture orientation source. Generated runbooks must preserve the
+  exhaustive-by-default artifact and replay rules below.
 - **Loop mode**: user asks to run an implementation loop with embedded review,
   implement a plan with review rounds, or "go point by point through the plan
   and fix gaps". First check for root `AGENTIC_LOOP.md`. If it exists, use that
@@ -33,27 +34,69 @@ and accepted-risk policy.
   unless updating or debugging the skill. If root `AGENTIC_LOOP.md` is missing,
   bootstrap it automatically before continuing. Do not search or create
   alternate runbook paths.
-- **Reviewer mode**: user asks for an independent review role. Read
+  - If the user explicitly says to work by a supplied plan, spec, or checklist,
+    use those artifacts as the initial source of truth.
+  - If the user supplies only a checklist, resolve linked or referenced spec and
+    plan files from it. When they are missing, stale, or noncanonical, create or
+    update the missing artifacts before implementation.
+  - If the user gives only an informal goal and did not ask for review-only
+    output, author a no-variant spec, implementation plan, and checklist in the
+    current project's accepted markdown format, save them, then immediately run
+    the full implementation/review/repair loop against them.
+- **Reviewer mode**: user asks for an independent review role, audit, or
+  findings-only pass and does not ask for implementation. Read
   `references/reviewer-prompts.md`, dispatch at least one reviewer subagent
-  when the subagent tool is available, and return findings only.
+  when the subagent tool is available, and return findings only. Reviewer mode
+  does not auto-author plans and does not repair findings unless the user
+  converts it into loop mode.
 
-## Required Inputs For Loop Mode
+## Planning Artifact Contract
 
-Before implementation, identify:
+Before implementation, establish:
 
-- approved `SPEC_FILE`, `PLAN_FILE`, and `CHECKLIST_FILE`;
-- `EVIDENCE_FILE`, if one exists;
+- `SPEC_FILE`;
+- `PLAN_FILE`;
+- `CHECKLIST_FILE`;
+- `EVIDENCE_FILE`, if one exists or must be created;
 - exact target scope and forbidden scope;
 - root `AGENTIC_LOOP.md`, plus `AGENTS.md` or equivalent governing rules;
 - `ARCHITECTURE.md` or `docs/ARCHITECTURE.md`, when present, as the compact
   project map for ownership, stack, runtime, data flow, and forbidden paths;
 - live gates, credentials, external services, and manual approvals.
 
+Artifact source rules:
+
+- Explicit spec/plan/checklist supplied by the user wins.
+- Checklist-only input must be expanded by resolving linked artifacts or
+  authoring the missing spec and plan.
+- Informal goals in loop mode must be converted into saved no-variant spec,
+  implementation plan, and checklist files before product code changes.
+- Generated artifacts must follow the current project's accepted markdown
+  naming, structure, and location conventions. Inspect nearby
+  `move-to-typescript/`, `docs/`, or project plan files before creating them.
+
+Run the Artifact Completeness Gate before product code changes. The artifacts
+pass only when each material requirement is implementable without guessing:
+
+- the no-variant spec states scope, non-goals, invariants, target behavior,
+  failure behavior, acceptance criteria, and verification gates;
+- the implementation plan maps spec requirements to ordered implementation
+  slices, owned surfaces, expected contract/data-flow changes, docs updates,
+  and verification;
+- the checklist contains concrete checkbox items with target files/modules,
+  expected observable outcome, and exact verification command, gate, assertion,
+  or evidence;
+- no item relies on vague verbs such as "support", "update", "handle", or
+  "improve" unless the object, behavior, surface, and proof are explicit;
+- ambiguous, conflicting, placeholder, or unowned items are rewritten before
+  implementation, not carried as assumptions.
+
 If root `AGENTIC_LOOP.md` is missing, create it automatically with the
 bootstrap script, then refine the draft after reading the project's governing
 docs. Do not overwrite an existing runbook without explicit user approval. Do
-not use alternate runbook paths as canonical files. Do not run a multi-round
-loop from an informal task description alone.
+not use alternate runbook paths as canonical files. After required artifacts
+exist, begin implementation immediately unless the user explicitly asked only
+to draft planning documents.
 
 ## Core Operating Rules
 
@@ -62,6 +105,9 @@ loop from an informal task description alone.
   reason, residual risk, and follow-up owner or gate.
 - Treat documented commands, flags, URLs, ports, and modes as contracts that
   must be implemented, verified, blocked, or accepted as risk.
+- Do not start product code edits until the Artifact Completeness Gate is
+  recorded as passed, blocked by a concrete external decision, or explicitly
+  waived by the user.
 - Treat the loop as implementation-first: execute the next incomplete checklist
   slice before broad review when supplied plan artifacts are not yet complete.
 - Keep reviewers out of scope ownership; they validate completed slices and
@@ -71,9 +117,9 @@ loop from an informal task description alone.
 - Use the Architecture Orientation from `AGENTIC_LOOP.md` and reviewer context
   packets to route work to the right apps, packages, runtime owners, and
   reviewer roles before reading full architecture docs.
-- Use compact reviewer context packets, adaptive P2 caps, delta-only re-review,
-  role fusion, and a finding ledger to reduce token and latency cost without
-  weakening quality gates.
+- Use compact reviewer context packets, role fusion where safe, and a finding
+  ledger to reduce token and latency cost. Do not cap P2 findings in exhaustive
+  loop mode, and do not use delta-only review as the final acceptance pass.
 - Emit exactly one Progress Beacon per review cycle as a user-visible
   chat/commentary update after reviewer batches are deduplicated and before
   repair starts. Do not emit phase-by-phase beacons for orientation,
@@ -105,8 +151,29 @@ Review Cycle N:
   output summaries instead of full logs.
 - Apply the Read and output budget: reviewers declare read mode and evidence
   summarizes command output while linking full logs/artifacts.
-- Require reviewers to batch material findings: all P0/P1, P2 up to the
-  adaptive cap, no P3 unless requested, and no stopping after the first issue.
+- Build and maintain a full traceability matrix from spec requirement to plan
+  step to checklist row to implementation refs to verification and evidence.
+- Treat artifact completeness findings as P1 before code begins. Fix them by
+  revising the spec, plan, and checklist; do not bury them in evidence as
+  implementation assumptions.
+- Every spec, plan, and checklist row must end in exactly one of these states:
+  `implemented_and_verified`, `implemented_fail_closed`,
+  `blocked_live_or_external_gate`, `accepted_risk`,
+  `not_in_scope_with_reason`, or `gap_found`.
+- Require reviewers to batch material findings: all P0/P1/P2 findings in the
+  assigned scope, no P3 unless requested, and no stopping after the first issue.
+- Use delta review only as an intermediate repair accelerator. The final
+  acceptance pass must be a full adversarial replay against the original
+  spec/plan/checklist, current implementation, traceability matrix,
+  verification matrix, and evidence.
+- Run a Red-Team/Evidence-Auditor pass before stopping. It must try to disprove
+  completion by looking for stale checked items, skipped gates, hidden
+  fallbacks, undocumented deviations, claims without commands, and untraced
+  spec/plan/checklist rows.
+- For medium and larger loops, maintain a verification manifest in
+  `.agentic-loop/verification.md` or an explicitly linked evidence file. It
+  must map each required gate to the exact command or manual check, outcome,
+  skipped/blocker reason, and evidence reference.
 - Run a final adversarial plan replay before stopping.
 - If a later prompt finds a P0/P1/P2 after the loop previously stopped, record
   it as an escaped finding and strengthen the runbook or plan if process failed.
@@ -173,10 +240,12 @@ node "$CODEX_HOME/skills/agentic-loop/scripts/draft-context-packet.mjs" \
   --known-failure "live gate not run"
 ```
 
-Build a traceability matrix draft from plan/checklist files:
+Build a traceability matrix draft from plan/checklist files before
+implementation and again before final replay:
 
 ```bash
 node "$CODEX_HOME/skills/agentic-loop/scripts/build-traceability-index.mjs" \
+  --spec SPEC_FILE \
   --plan PLAN_FILE \
   --checklist CHECKLIST_FILE \
   --existing .agentic-loop/traceability.md \
@@ -187,6 +256,16 @@ node "$CODEX_HOME/skills/agentic-loop/scripts/build-traceability-index.mjs" \
 Use `--changed-only` for delta review packets and `--include-headings` only
 when headings are actionable plan/checklist items. Use `--ids` for targeted
 replay of known plan/checklist rows.
+
+Run the planning artifact completeness helper before implementation when the
+three artifact paths are known:
+
+```bash
+node "$CODEX_HOME/skills/agentic-loop/scripts/validate-planning-artifacts.mjs" \
+  --spec SPEC_FILE \
+  --plan PLAN_FILE \
+  --checklist CHECKLIST_FILE
+```
 
 Validate evidence loop state before final replay or stopping:
 

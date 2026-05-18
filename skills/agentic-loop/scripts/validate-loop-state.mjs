@@ -6,7 +6,9 @@ import process from "node:process";
 const CURRENT_STATE_FIELDS = [
   "active slice",
   "runtime protocol",
-  "plan/checklist ids changed",
+  "artifact source",
+  "spec/plan/checklist ids changed",
+  "artifact completeness gate status",
   "open findings",
   "accepted risks",
   "verification matrix status",
@@ -30,6 +32,7 @@ const TRACEABILITY_STATUSES = new Set([
   "implemented_fail_closed",
   "blocked_live_or_external_gate",
   "accepted_risk",
+  "not_in_scope_with_reason",
   "gap_found"
 ]);
 
@@ -104,7 +107,7 @@ function validateTableStatuses(text, errors) {
       continue;
     }
     const id = cells[0];
-    if (/^(PLAN|CHK)-\d{3,}$/.test(id)) {
+    if (/^(SPEC|PLAN|CHK)-\d{3,}$/.test(id)) {
       const status = cells[cells.length - 1];
       if (!TRACEABILITY_STATUSES.has(status)) {
         errors.push(`traceability row ${id} has invalid status: ${status || "<empty>"}`);

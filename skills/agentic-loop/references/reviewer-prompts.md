@@ -17,7 +17,8 @@ Use this when scope is ambiguous or critical enough to justify a triage
 subagent.
 
 ```text
-Review the approved plan/checklist and recommend review depth.
+Review the supplied or auto-authored spec/plan/checklist and recommend review
+depth.
 
 Inputs:
 - SPEC_FILE:
@@ -52,7 +53,7 @@ concrete finding:
 - CHECKLIST_FILE:
 - PROJECT_RUNBOOK:
 
-Role: [Architecture | Runtime | Contract | E2E | Evidence | Final Plan Replay]
+Role: [Architecture | Artifact Completeness | Runtime | Contract | E2E | Evidence | Final Plan Replay | Red-Team Evidence Audit]
 Scope:
 - Include:
 - Exclude:
@@ -62,13 +63,14 @@ Use P0/P1/P2/P3 severity.
 This is an implementation-first loop with embedded subagent review.
 Use the supplied reviewer context packet first. Read additional files only when
 needed to validate a concrete finding or resolve a stated uncertainty.
-Validate completed implementation slices against the supplied plan; do not make
-yourself the driver of new implementation scope.
+Validate completed implementation slices against the supplied or auto-authored
+spec/plan/checklist; do not make yourself the driver of new implementation
+scope.
 Use the supplied finding ledger before reporting duplicates.
-Return all P0/P1 findings and P2 findings up to the adaptive cap in the context packet.
+Return every material P0/P1/P2 finding in your assigned scope.
 Do not stop after the first finding.
 Group same-root-cause findings instead of repeating them.
-End with "No more material findings within scope" or "Stopped at finding cap".
+End with "No more material findings within scope".
 End with "Extra files read: none" or list every extra file read plus why it was needed.
 Classify read mode as `packet-only`, `targeted-extra`, or `scope-expanded`.
 Do not suggest unrelated refactors.
@@ -86,16 +88,14 @@ Suggested verification: exact command or assertion
 
 ## Reviewer Finding Batch Rules
 
-- Return every P0/P1 found within assigned scope.
-- Return P2 findings up to the adaptive cap set by Impact Triage.
+- Return every material P0/P1/P2 finding found within assigned scope.
 - Omit P3 unless the user explicitly requested polish.
 - Do not stop after the first finding.
 - Group same-root-cause issues into one finding with multiple affected
   locations.
 - Return overlap with another role when you have independent evidence or a
   role-specific angle; the owning agent deduplicates after collection.
-- End with `No more material findings within scope` or
-  `Stopped at finding cap`.
+- End with `No more material findings within scope`.
 - End with `Extra files read: none` or a file-by-file reason list.
 - Include read mode: `packet-only`, `targeted-extra`, or `scope-expanded`.
 
@@ -106,6 +106,24 @@ Suggested verification: exact command or assertion
 - hidden fallbacks, silent degradation, or alternate runtimes;
 - legacy-direct paths;
 - missing architecture documentation updates.
+
+## Artifact Completeness Reviewer Focus
+
+Review before product code changes. The artifacts pass only when the agent can
+implement without guessing.
+
+Check that:
+
+- every material spec requirement has scope, non-goal or boundary context,
+  target behavior, failure behavior, acceptance criteria, and verification;
+- every plan step maps to spec requirements, owned files/modules/routes, data
+  or contract changes, docs updates when needed, and verification;
+- every checklist item names the target surface, exact observable outcome, and
+  verification command, gate, assertion, or evidence;
+- vague verbs such as "support", "update", "handle", "improve", or "fix" are
+  expanded into explicit behavior and proof;
+- conflicts, placeholders, unowned surfaces, or missing acceptance criteria are
+  returned as P1 artifact findings.
 
 ## Runtime Reviewer Focus
 
@@ -141,10 +159,9 @@ Suggested verification: exact command or assertion
 
 ## Final Plan Replay Reviewer Focus
 
-Use the traceability matrix first. Read full plan/checklist text only for rows
-that are changed, new, missing implementation refs, missing verification refs,
-gap-found, blocked, accepted-risk, linked to open findings, or selected by the
-deterministic hash spot-check.
+Run a full replay against the original spec, plan, checklist, implementation,
+traceability matrix, verification matrix, finding ledger, and evidence. Hashes
+may help detect drift, but they do not replace full replay.
 
 For each replayed row, classify:
 
@@ -152,10 +169,22 @@ For each replayed row, classify:
 - `implemented_fail_closed`;
 - `blocked_live_or_external_gate`;
 - `accepted_risk`;
+- `not_in_scope_with_reason`;
 - `gap_found`.
 
 Treat documented commands, environment variables, URLs, ports, flags, and modes
 as contracts. Documentation alone is not proof.
+
+## Red-Team Evidence Audit Focus
+
+Try to disprove completion. Look for:
+
+- untraced spec, plan, or checklist rows;
+- stale checked items without implementation and verification proof;
+- skipped gates reported as complete;
+- hidden fallbacks, bypasses, or silent degradation;
+- accepted risks without reason, residual risk, and follow-up owner or gate;
+- final-answer claims that are not backed by commands or evidence.
 
 ## Bounded Repair Worker Prompt
 
