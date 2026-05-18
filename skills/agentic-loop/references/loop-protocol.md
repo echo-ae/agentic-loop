@@ -66,6 +66,9 @@ The gate passes only when:
   "improve" unless the object, behavior, surface, and proof are explicit;
 - ambiguous, conflicting, placeholder, or unowned items are rewritten before
   implementation.
+- valid multiline markdown list items are allowed. Continuation lines and
+  nested bullets belong to the parent item; do not flatten good artifacts into
+  one-line items just to satisfy tooling.
 
 Run `node "$CODEX_HOME/skills/agentic-loop/scripts/validate-planning-artifacts.mjs" --spec SPEC_FILE --plan PLAN_FILE --checklist CHECKLIST_FILE`
 when available. Treat failures as P1 artifact findings and revise the

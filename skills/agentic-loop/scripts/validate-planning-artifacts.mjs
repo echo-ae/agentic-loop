@@ -46,30 +46,75 @@ function wordCount(text) {
   return normalize(text).split(/\s+/).filter(Boolean).length;
 }
 
-function extractChecklistItems(text) {
+function parseListItems(text, options = {}) {
   const items = [];
   const lines = text.split("\n");
+  let current = null;
+
+  const flush = () => {
+    if (current && normalize(current.parts.join(" ")).length > 0) {
+      items.push({
+        line: current.line,
+        marker: current.marker,
+        text: normalize(current.parts.join(" "))
+      });
+    }
+    current = null;
+  };
+
   for (let index = 0; index < lines.length; index += 1) {
-    const match = lines[index].match(/^\s*[-*]\s+\[[ xX-]\]\s+(.+)$/);
-    if (match) {
-      items.push({ line: index + 1, text: match[1].trim() });
+    const line = lines[index];
+    if (/^\s*#{1,6}\s+/.test(line)) {
+      flush();
+      continue;
+    }
+
+    const checkbox = line.match(/^(\s*)[-*]\s+\[[ xX-]\]\s+(.+)$/);
+    const numbered = line.match(/^(\s*)\d+\.\s+(.+)$/);
+    const bullet = line.match(/^(\s*)[-*]\s+(.+)$/);
+    const markerMatch =
+      checkbox ??
+      (options.includeNumbered ? numbered : null) ??
+      (options.includeBullets ? bullet : null);
+
+    if (markerMatch) {
+      const indent = markerMatch[1].length;
+      const marker = checkbox ? "checkbox" : numbered ? "numbered" : "bullet";
+      const startsNewItem = !current || indent <= current.indent;
+      if (startsNewItem) {
+        flush();
+        current = {
+          indent,
+          line: index + 1,
+          marker,
+          parts: [markerMatch[2].trim()]
+        };
+      } else {
+        current.parts.push(markerMatch[2].trim());
+      }
+      continue;
+    }
+
+    if (current) {
+      const trimmed = line.trim();
+      if (trimmed) {
+        current.parts.push(trimmed);
+      }
     }
   }
+
+  flush();
   return items;
 }
 
+function extractChecklistItems(text) {
+  return parseListItems(text).filter((item) => item.marker === "checkbox");
+}
+
 function extractPlanItems(text) {
-  const items = [];
-  const lines = text.split("\n");
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const numbered = line.match(/^\s*\d+\.\s+(.+)$/);
-    const checkbox = line.match(/^\s*[-*]\s+\[[ xX-]\]\s+(.+)$/);
-    if (numbered || checkbox) {
-      items.push({ line: index + 1, text: (numbered?.[1] ?? checkbox?.[1] ?? "").trim() });
-    }
-  }
-  return items;
+  return parseListItems(text, { includeNumbered: true }).filter((item) =>
+    ["checkbox", "numbered"].includes(item.marker)
+  );
 }
 
 function hasHeading(text, pattern) {
@@ -116,10 +161,10 @@ function validateSpec(text, findings) {
       findings.push(`SPEC_FILE: missing ${label}`);
     }
   }
-  const requirementLines = text
-    .split("\n")
-    .filter((line) => /^\s*(?:[-*]|\d+\.)\s+/.test(line) && REQUIREMENT_PATTERN.test(line));
-  if (requirementLines.length === 0) {
+  const requirementItems = parseListItems(text, { includeBullets: true, includeNumbered: true }).filter((item) =>
+    REQUIREMENT_PATTERN.test(item.text)
+  );
+  if (requirementItems.length === 0) {
     findings.push("SPEC_FILE: no concrete requirement or invariant bullets detected");
   }
 }

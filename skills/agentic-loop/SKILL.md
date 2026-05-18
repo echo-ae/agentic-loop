@@ -90,6 +90,9 @@ pass only when each material requirement is implementable without guessing:
   "improve" unless the object, behavior, surface, and proof are explicit;
 - ambiguous, conflicting, placeholder, or unowned items are rewritten before
   implementation, not carried as assumptions.
+- valid multiline markdown list items are allowed. Continuation lines and
+  nested bullets belong to the parent item; do not flatten good artifacts into
+  one-line items just to satisfy tooling.
 
 If root `AGENTIC_LOOP.md` is missing, create it automatically with the
 bootstrap script, then refine the draft after reading the project's governing

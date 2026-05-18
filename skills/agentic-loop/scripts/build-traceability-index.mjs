@@ -72,17 +72,34 @@ function excerpt(text, maxLength = 96) {
   return `${normalized.slice(0, maxLength - 3)}...`;
 }
 
+function flushMarkdownItem(items, current) {
+  if (!current || normalizeItem(current.parts.join(" ")).length === 0) {
+    return;
+  }
+  items.push({
+    kind: current.kind,
+    line: current.line,
+    sectionPath: current.sectionPath,
+    sourcePath: current.sourcePath,
+    text: normalizeItem(current.parts.join(" "))
+  });
+}
+
 function extractItems(text, sourcePath, preferredKind, options) {
   const items = [];
   const lines = text.split("\n");
   const headingStack = [];
+  let current = null;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const heading = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
-    const checkbox = line.match(/^\s*[-*]\s+\[[ xX-]\]\s+(.+)$/);
-    const numbered = line.match(/^\s*\d+\.\s+(.+)$/);
+    const checkbox = line.match(/^(\s*)[-*]\s+\[[ xX-]\]\s+(.+)$/);
+    const numbered = line.match(/^(\s*)\d+\.\s+(.+)$/);
+    const bullet = line.match(/^(\s*)[-*]\s+(.+)$/);
 
     if (heading) {
+      flushMarkdownItem(items, current);
+      current = null;
       const level = heading[1].length;
       headingStack.splice(level - 1);
       headingStack[level - 1] = heading[2];
@@ -97,24 +114,39 @@ function extractItems(text, sourcePath, preferredKind, options) {
         sourcePath,
         text: heading[2]
       });
-    } else if (checkbox) {
-      items.push({
-        kind: "checkbox",
-        line: index + 1,
-        sectionPath: headingStack.filter(Boolean).join(" / "),
-        sourcePath,
-        text: checkbox[1]
-      });
-    } else if ((preferredKind === "plan" || preferredKind === "spec") && numbered) {
-      items.push({
-        kind: "numbered",
-        line: index + 1,
-        sectionPath: headingStack.filter(Boolean).join(" / "),
-        sourcePath,
-        text: numbered[1]
-      });
+    } else {
+      const markerMatch = checkbox ?? numbered ?? (preferredKind === "spec" ? bullet : null);
+      if (markerMatch) {
+        const indent = markerMatch[1].length;
+        const kind = checkbox ? "checkbox" : numbered ? "numbered" : "bullet";
+        const isAcceptedKind =
+          kind === "checkbox" ||
+          (kind === "numbered" && (preferredKind === "plan" || preferredKind === "spec")) ||
+          (kind === "bullet" && preferredKind === "spec");
+        if (current && indent > current.indent) {
+          current.parts.push(markerMatch[2].trim());
+          continue;
+        }
+        flushMarkdownItem(items, current);
+        current = isAcceptedKind
+          ? {
+              indent,
+              kind,
+              line: index + 1,
+              sectionPath: headingStack.filter(Boolean).join(" / "),
+              sourcePath,
+              parts: [markerMatch[2].trim()]
+            }
+          : null;
+      } else if (current) {
+        const trimmed = line.trim();
+        if (trimmed) {
+          current.parts.push(trimmed);
+        }
+      }
     }
   }
+  flushMarkdownItem(items, current);
   return items.filter((item) => normalizeItem(item.text).length > 0 && matchesSection(item, options.sections));
 }
 
